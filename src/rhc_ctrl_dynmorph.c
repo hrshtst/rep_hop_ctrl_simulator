@@ -159,7 +159,7 @@ double _ctrl_dynmorph_calc_phi_ratio_linear(double phi)
 double _ctrl_dynmorph_calc_phi_ratio_piecewise(double phi)
 {
   double s;
-  if( phi < PI_2 ) s = 1.0;
+  if( phi < -PI_2 ) s = 1.0;
   else s = 0.0;
   return s;
 }
