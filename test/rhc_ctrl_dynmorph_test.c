@@ -419,8 +419,8 @@ TEST(test_ctrl_dynmorph_update_params_hop_soft_landing_fix_za)
     double expected_za;
   } cases[] = {
     /*   z,   v , za,  zh,  zm,  zb, rho, z_apex, expected_za */
-    { 1.5, -0.5, 2.5, 2.0, 1.55, 1.55-3*sqrt(29)/20, 1.0, 3.0, 2.5, },
-    { 0.8, -0.5, 1.5, 1.0, 0.8,  0.8-sqrt(6)/5, 1.0, 1.6, 1.5, },
+    { 1.5, -0.5, 2.5, 2.0, 1.55, 0.5, 1.0, 3.0, 3.0, },
+    { 0.8, -0.5, 1.5, 1.0, 0.8,  0.8-sqrt(7)/5, 1.0, 1.6, 1.6, },
     { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, },
   };
   struct case_t *c;
