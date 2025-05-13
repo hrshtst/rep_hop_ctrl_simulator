@@ -7,7 +7,8 @@ enum ctrl_dynmorph_types{
   dynmorph_default = 0,
   soft_landing_piecewise,
   soft_landing_linear,
-  no_update_params,
+  fix_zb,
+  fix_zm,
 };
 
 typedef struct{
@@ -57,7 +58,8 @@ double ctrl_dynmorph_calc_zh(double za, double zm, double zb);
 double ctrl_dynmorph_calc_zm(double za, double zh, double zb);
 double ctrl_dynmorph_calc_zb(double za, double zh, double zm);
 ctrl_t *ctrl_dynmorph_update_params_default(ctrl_t *self, vec_t p);
-ctrl_t *ctrl_dynmorph_update_params_no_update(ctrl_t *self, vec_t p);
+ctrl_t *ctrl_dynmorph_update_params_fix_zb(ctrl_t *self, vec_t p);
+ctrl_t *ctrl_dynmorph_update_params_fix_zm(ctrl_t *self, vec_t p);
 
 cmd_t *ctrl_dynmorph_cmd_init(ctrl_t *self, cmd_t *cmd);
 ctrl_t *ctrl_dynmorph_create_with_type(ctrl_t *self, cmd_t *cmd, model_t *model, enum ctrl_dynmorph_types type);

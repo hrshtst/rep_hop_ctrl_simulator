@@ -31,8 +31,11 @@ ctrl_t *ctrl_dynmorph_create_with_type(ctrl_t *self, cmd_t *cmd, model_t *model,
   prp = self->prp;
   prp->type = type;
 
-  if( prp->type == no_update_params ){
-    prp->_update_params = ctrl_dynmorph_update_params_no_update;
+  if( prp->type == fix_zb ){
+    prp->_update_params = ctrl_dynmorph_update_params_fix_zb;
+    prp->_calc_phi_ratio = _ctrl_dynmorph_calc_phi_ratio_piecewise;
+  } else if( prp->type == fix_zm ){
+    prp->_update_params = ctrl_dynmorph_update_params_fix_zm;
     prp->_calc_phi_ratio = _ctrl_dynmorph_calc_phi_ratio_piecewise;
   } else{
     prp->_update_params = ctrl_dynmorph_update_params_default;
@@ -250,7 +253,7 @@ ctrl_t *ctrl_dynmorph_update_params_default(ctrl_t *self, vec_t p)
   return self;
 }
 
-ctrl_t *ctrl_dynmorph_update_params_no_update(ctrl_t *self, vec_t p)
+ctrl_t *ctrl_dynmorph_update_params_fix_zb(ctrl_t *self, vec_t p)
 {
   cmd_t *params;
   double zm;
@@ -259,6 +262,18 @@ ctrl_t *ctrl_dynmorph_update_params_no_update(ctrl_t *self, vec_t p)
   cmd_copy( ctrl_cmd(self), params );
   zm = ctrl_dynmorph_calc_zm( ctrl_za(self), ctrl_zh(self), ctrl_zb(self) );
   params->zm = zm;
+  return self;
+}
+
+ctrl_t *ctrl_dynmorph_update_params_fix_zm(ctrl_t *self, vec_t p)
+{
+  cmd_t *params;
+  double zb;
+
+  params = ctrl_dynmorph_params(self);
+  cmd_copy( ctrl_cmd(self), params );
+  zb = ctrl_dynmorph_calc_zb( ctrl_za(self), ctrl_zh(self), ctrl_zm(self) );
+  params->zb = zb;
   return self;
 }
 

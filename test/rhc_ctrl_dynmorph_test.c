@@ -58,36 +58,36 @@ TEST(test_ctrl_dynmorph_create)
   ASSERT_EQ( 0, ctrl_dynmorph_params_rho(&ctrl) );
 }
 
-TEST(test_ctrl_dynmorph_create_no_update)
+TEST(test_ctrl_dynmorph_create_fix_zb)
 {
-  ctrl_t ctrl_no_update;
-  ctrl_dynmorph_create_with_type( &ctrl_no_update, &cmd, &model, no_update_params );
+  ctrl_t ctrl_fix_zb;
+  ctrl_dynmorph_create_with_type( &ctrl_fix_zb, &cmd, &model, fix_zb );
 
-  ASSERT_PTREQ( ctrl_cmd( &ctrl_no_update ), &cmd );
-  ASSERT_PTREQ( ctrl_model( &ctrl_no_update ), &model );
+  ASSERT_PTREQ( ctrl_cmd( &ctrl_fix_zb ), &cmd );
+  ASSERT_PTREQ( ctrl_model( &ctrl_fix_zb ), &model );
   ASSERT_PTREQ( ctrl_dynmorph_update, ctrl._update );
   ASSERT_PTREQ( ctrl_dynmorph_destroy, ctrl._destroy );
   ASSERT_PTREQ( ctrl_dynmorph_header, ctrl._header );
   ASSERT_PTREQ( ctrl_dynmorph_writer, ctrl._writer );
   ASSERT_PTRNE( NULL, ctrl.prp );
 
-  ASSERT_EQ( no_update_params, ctrl_dynmorph_type(&ctrl_no_update) );
-  ASSERT_PTREQ( ctrl_dynmorph_update_params_no_update, ctrl_dynmorph_get_prp(&ctrl_no_update)->_update_params );
-  ASSERT_EQ( 0, ctrl_dynmorph_q1(&ctrl_no_update) );
-  ASSERT_EQ( 0, ctrl_dynmorph_q2(&ctrl_no_update) );
-  ASSERT_EQ( 0, ctrl_dynmorph_vm(&ctrl_no_update) );
+  ASSERT_EQ( fix_zb, ctrl_dynmorph_type(&ctrl_fix_zb) );
+  ASSERT_PTREQ( ctrl_dynmorph_update_params_fix_zb, ctrl_dynmorph_get_prp(&ctrl_fix_zb)->_update_params );
+  ASSERT_EQ( 0, ctrl_dynmorph_q1(&ctrl_fix_zb) );
+  ASSERT_EQ( 0, ctrl_dynmorph_q2(&ctrl_fix_zb) );
+  ASSERT_EQ( 0, ctrl_dynmorph_vm(&ctrl_fix_zb) );
 
-  ASSERT_EQ( 0, ctrl_dynmorph_rho(&ctrl_no_update) );
-  ASSERT_EQ( 4.0, ctrl_dynmorph_k(&ctrl_no_update) );
-  ASSERT_TRUE( ctrl_dynmorph_soft_landing(&ctrl_no_update) );
+  ASSERT_EQ( 0, ctrl_dynmorph_rho(&ctrl_fix_zb) );
+  ASSERT_EQ( 4.0, ctrl_dynmorph_k(&ctrl_fix_zb) );
+  ASSERT_TRUE( ctrl_dynmorph_soft_landing(&ctrl_fix_zb) );
 
-  ASSERT_EQ( 0.28, ctrl_dynmorph_params_za(&ctrl_no_update) );
-  ASSERT_EQ( 0.26, ctrl_dynmorph_params_zh(&ctrl_no_update) );
-  ASSERT_EQ( 0.255, ctrl_dynmorph_params_zm(&ctrl_no_update) );
-  ASSERT_EQ( 0.23, ctrl_dynmorph_params_zb(&ctrl_no_update) );
-  ASSERT_EQ( 0, ctrl_dynmorph_params_rho(&ctrl_no_update) );
+  ASSERT_EQ( 0.28, ctrl_dynmorph_params_za(&ctrl_fix_zb) );
+  ASSERT_EQ( 0.26, ctrl_dynmorph_params_zh(&ctrl_fix_zb) );
+  ASSERT_EQ( 0.255, ctrl_dynmorph_params_zm(&ctrl_fix_zb) );
+  ASSERT_EQ( 0.23, ctrl_dynmorph_params_zb(&ctrl_fix_zb) );
+  ASSERT_EQ( 0, ctrl_dynmorph_params_rho(&ctrl_fix_zb) );
 
-  ctrl_destroy( &ctrl_no_update );
+  ctrl_destroy( &ctrl_fix_zb );
 }
 
 TEST(test_ctrl_dynmorph_destroy)
@@ -446,9 +446,7 @@ TEST(test_ctrl_dynmorph_update_params_hop_soft_landing_fix_za)
   }
 }
 
-
-
-TEST(test_ctrl_dynmorph_update_params_no_update)
+TEST(test_ctrl_dynmorph_update_params_fix_zb)
 {
   struct case_t {
     double z, v, za, zh, zm, zb, rho;
@@ -465,11 +463,37 @@ TEST(test_ctrl_dynmorph_update_params_no_update)
     cmd_set( &cmd, c->za, c->zh, c->zm, c->zb );
     ctrl_dynmorph_set_rho( &ctrl, c->rho );
     vec_set_elem_list( p, c->z, c->v );
-    ctrl_dynmorph_update_params_no_update( &ctrl, p );
+    ctrl_dynmorph_update_params_fix_zb( &ctrl, p );
     ASSERT_EQ( c->za, ctrl_dynmorph_params_za(&ctrl) );
     ASSERT_EQ( c->zh, ctrl_dynmorph_params_zh(&ctrl) );
     ASSERT_NEAR( c->expected_zm, ctrl_dynmorph_params_zm(&ctrl), 1e-10 );
     ASSERT_EQ( c->zb, ctrl_dynmorph_params_zb(&ctrl) );
+    ASSERT_EQ( c->rho, ctrl_dynmorph_params_rho(&ctrl) );
+  }
+}
+
+TEST(test_ctrl_dynmorph_update_params_fix_zm)
+{
+  struct case_t {
+    double z, v, za, zh, zm, zb, rho;
+    double expected_zb;
+  } cases[] = {
+    /*  z,   v,  za,  zh,  zm,  zb, rho, expected_zb */
+    { 0.0, 0.0, 2.0, 1.0, 0.8, 0.5, 1.0, 0.8-0.2*sqrt(11), },
+    { 0.0, 0.0, 1.5, 1.0, 0.8, 0.5, 1.0, 0.8-0.2*sqrt(6), },
+    { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, },
+  };
+  struct case_t *c;
+
+  for( c=cases; c->zb>0.0; c++ ){
+    cmd_set( &cmd, c->za, c->zh, c->zm, c->zb );
+    ctrl_dynmorph_set_rho( &ctrl, c->rho );
+    vec_set_elem_list( p, c->z, c->v );
+    ctrl_dynmorph_update_params_fix_zm( &ctrl, p );
+    ASSERT_EQ( c->za, ctrl_dynmorph_params_za(&ctrl) );
+    ASSERT_EQ( c->zh, ctrl_dynmorph_params_zh(&ctrl) );
+    ASSERT_EQ( c->zm, ctrl_dynmorph_params_zm(&ctrl) );
+    ASSERT_NEAR( c->expected_zb, ctrl_dynmorph_params_zb(&ctrl), 1e-10 );
     ASSERT_EQ( c->rho, ctrl_dynmorph_params_rho(&ctrl) );
   }
 }
@@ -479,7 +503,7 @@ TEST_SUITE(test_ctrl_dynmorph)
   CONFIGURE_SUITE( setup, teardown );
   RUN_TEST(test_ctrl_dynmorph_cmd_init);
   RUN_TEST(test_ctrl_dynmorph_create);
-  RUN_TEST(test_ctrl_dynmorph_create_no_update);
+  RUN_TEST(test_ctrl_dynmorph_create_fix_zb);
   RUN_TEST(test_ctrl_dynmorph_destroy);
   RUN_TEST(test_ctrl_dynmorph_set_rho);
   RUN_TEST(test_ctrl_dynmorph_set_k);
@@ -497,7 +521,8 @@ TEST_SUITE(test_ctrl_dynmorph)
   RUN_TEST(test_ctrl_dynmorph_update_params_hop_fix_zm);
   RUN_TEST(test_ctrl_dynmorph_update_params_squat_fix_zm);
   RUN_TEST(test_ctrl_dynmorph_update_params_hop_soft_landing_fix_za);
-  RUN_TEST(test_ctrl_dynmorph_update_params_no_update);
+  RUN_TEST(test_ctrl_dynmorph_update_params_fix_zb);
+  RUN_TEST(test_ctrl_dynmorph_update_params_fix_zm);
 }
 
 int main(int argc, char *argv[])
