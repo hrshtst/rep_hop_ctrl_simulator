@@ -8,9 +8,11 @@
 #include <string.h>
 #include <time.h>
 
-#ifndef BUFSIZ
-#define BUFSIZ 512
-#endif  /* BUFSIZ */
+/* Project-wide buffer size for messages, tags, filenames, etc.
+   Defined explicitly rather than reusing stdio's RHC_BUFSIZ, whose value
+   is platform-dependent (and which made the previous `#ifndef RHC_BUFSIZ`
+   override a silent no-op, since <stdio.h> always defines it first). */
+#define RHC_BUFSIZ 8192
 
 /* error messages */
 #define ERR_SIZMIS        "size mismatch of vector"

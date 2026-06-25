@@ -157,7 +157,7 @@ TEST(test_ctrl_events_get_phase_string)
     { invalid, NULL },
   };
   struct case_t *c;
-  char buf[BUFSIZ];
+  char buf[RHC_BUFSIZ];
 
   for( c=cases; c->expected; c++ ){
     ctrl_events_get_phase_string( c->phase, buf );
@@ -494,7 +494,7 @@ TEST(test_ctrl_events_update_get_phase_string)
     {    0,    0,    0,     0,      0, "invalid"     },  /* terminator */
   };
   struct case_t *c;
-  char buf[BUFSIZ];
+  char buf[RHC_BUFSIZ];
 
   for( c=cases; c->za>0; c++ ){
     cmd.za = c->za;
@@ -1458,7 +1458,7 @@ TEST(test_ctrl_phase_string)
     { 0, 0, 0, 0, 0, 0, "invalid" },
   };
   struct case_t *c;
-  char buf[BUFSIZ];
+  char buf[RHC_BUFSIZ];
 
   for( c=cases; c->za != 0; c++ ){
     vec_set_elem_list( p, c->z, c->v );

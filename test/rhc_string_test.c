@@ -13,7 +13,7 @@ void teardown()
 TEST(test_string_copy)
 {
   const char s[] = "test string";
-  char d[BUFSIZ];
+  char d[RHC_BUFSIZ];
   char *ret;
 
   ret = string_copy(s, d);
@@ -24,7 +24,7 @@ TEST(test_string_copy)
 TEST(test_string_reverse)
 {
   const char s[] = "test string";
-  char d[BUFSIZ];
+  char d[RHC_BUFSIZ];
   char *ret;
 
   ret = string_reverse( s, d );

@@ -3,7 +3,7 @@
 static int foo = 0;
 static int bar = 0;
 static double baz = 0.0;
-char hoge[BUFSIZ];
+char hoge[TEST_BUFSIZ];
 
 void setup()
 {

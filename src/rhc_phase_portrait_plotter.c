@@ -124,7 +124,7 @@ vec_list_node_t *ppp_remove_p0_no_destroy(ppp_t *self, vec_t p0, double tol)
 void ppp_remove_p0(ppp_t *self, vec_t p0, double tol)
 {
   vec_list_node_t *node;
-  char msg[BUFSIZ];
+  char msg[RHC_BUFSIZ];
 
   node = ppp_remove_p0_no_destroy( self, p0, tol );
   if( node ){
@@ -150,10 +150,10 @@ void ppp_generate_edge_points_dec2bin(ppp_t *self, int dec, int bin[])
 
 void ppp_generate_edge_points_set_min_max(ppp_t *self, int ax, int ith, vec_t p0)
 {
-  int bin[BUFSIZ];
+  int bin[RHC_BUFSIZ];
   int i, j;
 
-  memset( bin, 0, sizeof(int)*BUFSIZ );
+  memset( bin, 0, sizeof(int)*RHC_BUFSIZ );
   ppp_generate_edge_points_dec2bin( self, ith, bin );
   j = ppp_dim(self) - 2;
   for( i=0; i<ppp_dim(self); i++ ){
@@ -164,11 +164,11 @@ void ppp_generate_edge_points_set_min_max(ppp_t *self, int ax, int ith, vec_t p0
 
 bool ppp_generate_edge_points_is_descending(ppp_t *self, int ax, int ith)
 {
-  int bin[BUFSIZ];
+  int bin[RHC_BUFSIZ];
   int i;
   int bin_sum = 0;
 
-  memset( bin, 0, sizeof(int)*BUFSIZ );
+  memset( bin, 0, sizeof(int)*RHC_BUFSIZ );
   ppp_generate_edge_points_dec2bin( self, ith, bin );
   for( i=0; i<ppp_dim(self); i++ )
     bin_sum += bin[i];

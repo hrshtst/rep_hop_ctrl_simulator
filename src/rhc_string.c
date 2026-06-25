@@ -39,12 +39,12 @@ bool string_starts_with(const char *s, const char *prefix) {
 }
 
 bool string_ends_with(const char *s, const char *suffix) {
-  char srev[BUFSIZ];
-  char suffixrev[BUFSIZ];
+  char srev[RHC_BUFSIZ];
+  char suffixrev[RHC_BUFSIZ];
 
   /* string_reverse writes len+1 bytes into the local buffers; bail out
      rather than overflow them when either input is too long. */
-  if( string_len(s) >= BUFSIZ || string_len(suffix) >= BUFSIZ )
+  if( string_len(s) >= RHC_BUFSIZ || string_len(suffix) >= RHC_BUFSIZ )
     return false;
   return string_starts_with(
       string_reverse(s, srev), string_reverse(suffix, suffixrev));
