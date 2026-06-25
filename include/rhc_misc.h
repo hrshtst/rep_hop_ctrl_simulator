@@ -9,7 +9,7 @@
 #define istiny(x)    istol( x, TOL )
 
 /* mathematics */
-inline double sqr(double x){ return x * x; }
+static inline double sqr(double x){ return x * x; }
 /* circle ratio */
 #define PI   3.14159265358979323846
 #define PIx2 6.28318530717958647692
