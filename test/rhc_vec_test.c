@@ -5,7 +5,7 @@
 /* set random values to a vector */
 void set_vec_rand(vec_t v)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v); i++ )
     vec_set_elem( v, i, rand() );
@@ -65,7 +65,7 @@ void check_vec_elem(vec_t v, size_t size, ... )
 {
   va_list args;
   double val;
-  register size_t i;
+  size_t i;
 
   va_start( args, size );
   for( i=0; i<size; i++ ){
@@ -78,7 +78,7 @@ void check_vec_elem(vec_t v, size_t size, ... )
 void check_vec_set_elem(size_t size, double *elem)
 {
   vec_t v;
-  register size_t i;
+  size_t i;
 
   v = vec_create( size );
   for( i=0; i<size; i++ )
@@ -122,7 +122,7 @@ TEST(test_vec_set_elem_list)
 void check_vec_set_elem_array(size_t n, double *elem)
 {
   vec_t v;
-  register size_t i;
+  size_t i;
 
   v = vec_create( n );
   vec_set_elem_array( v, elem );
@@ -151,7 +151,7 @@ TEST(test_vec_set_elem_array)
 void check_vec_fill(size_t n, double val)
 {
   vec_t v;
-  register size_t i;
+  size_t i;
 
   v = vec_create( n );
   set_vec_rand( v );
@@ -181,7 +181,7 @@ TEST(test_vec_fill)
 void check_vec_clear(size_t n)
 {
   vec_t v;
-  register size_t i;
+  size_t i;
 
   v = vec_create( n );
   set_vec_rand( v );
@@ -216,7 +216,7 @@ TEST(test_vec_create_list)
 
 void check_vec_elem_with_array(double *expected, vec_t v)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v); i++ )
     ASSERT_EQ( expected[i], vec_elem( v, i ) );
@@ -955,7 +955,7 @@ void check_vec_f_write(size_t n, double *val)
   vec_t v;
   char expected[BUFSIZ], actual[BUFSIZ], str[BUFSIZ];
   FILE *fp;
-  register size_t i;
+  size_t i;
 
   /* given */
   v = vec_create_array( n, val );

@@ -14,7 +14,7 @@ double randf(double min, double max)
 
 void assert_vec(vec_t v1, vec_t v2)
 {
-  register size_t i;
+  size_t i;
 
   ASSERT_EQ( vec_size(v1), vec_size(v2) );
   for( i=0; i< vec_size(v1); i++ )
@@ -23,7 +23,7 @@ void assert_vec(vec_t v1, vec_t v2)
 
 void setup()
 {
-  register int i, j;
+  int i, j;
 
   vec_ring_init( &ring, DIM, SIZE );
   for( i=0; i<NUM_VEC; i++ )
@@ -39,7 +39,7 @@ void setup()
 
 void teardown()
 {
-  register int i;
+  int i;
 
   vec_ring_destroy( &ring );
   for( i=0; i<NUM_VEC; i++ )
@@ -112,7 +112,7 @@ TEST(test_vec_ring_size)
 
 TEST(test_vec_ring_empty)
 {
-  register int i;
+  int i;
 
   ASSERT_TRUE( vec_ring_empty(&ring) );
 
@@ -131,7 +131,7 @@ TEST(test_vec_ring_empty)
 
 TEST(test_vec_ring_full)
 {
-  register int i;
+  int i;
 
   ASSERT_FALSE( vec_ring_full(&ring) );
 
@@ -360,7 +360,7 @@ TEST(test_vec_ring_pop_one)
 
 TEST(test_vec_ring_push_until_full)
 {
-  register int i;
+  int i;
 
   ASSERT_TRUE( vec_ring_empty(&ring) );
   for( i=0; i<SIZE; i++ ){
@@ -373,7 +373,7 @@ TEST(test_vec_ring_push_until_full)
 
 void push_until_full(vec_ring_t *vr)
 {
-  register int i;
+  int i;
 
   for( i=vec_ring_size(vr); i<vec_ring_capacity(vr); i++ ){
     vec_ring_push( vr, v[i] );

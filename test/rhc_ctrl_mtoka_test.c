@@ -34,7 +34,7 @@ void teardown()
 
 TEST(test_ctrl_mtoka_create)
 {
-  register int i;
+  int i;
   mtoka_osci_neuron_t *np;
 
   ASSERT_PTREQ( ctrl_cmd( &ctrl ), &cmd );
@@ -169,7 +169,7 @@ TEST(test_ctrl_mtoka_update_params)
     { 0, 0, 0, 0, 0, 0, 0, 0 },
   };
   struct case_t *c;
-  register int i;
+  int i;
   mtoka_osci_neuron_t *np;
 
   for( c=cases; c->tau>0; c++ ){
@@ -242,7 +242,7 @@ TEST(test_ctrl_mtoka_update_check_params)
     { 0, 0, 0, 0, 0, 0, 0, 0 },
   };
   struct case_t *c;
-  register int i;
+  int i;
   mtoka_osci_neuron_t *np;
 
   for( c=cases; c->tau > 0; c++ ){

@@ -220,7 +220,7 @@ void setup_ctrl(const char *argv[])
 void run()
 {
   vec_t p0;
-  register size_t i;
+  size_t i;
 
   p0 = vec_create( 2 );
   for( i=0; i<vec_size( zh_list ); i++ ){

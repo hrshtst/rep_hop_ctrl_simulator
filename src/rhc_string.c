@@ -10,7 +10,7 @@ int string_len(const char *s) {
 }
 
 char *string_reverse(const char *s, char *d) {
-  register int i;
+  int i;
   int len;
 
   len = string_len( s );
@@ -21,7 +21,7 @@ char *string_reverse(const char *s, char *d) {
 }
 
 bool string_is_digit(const char *s) {
-  register int i;
+  int i;
 
   for( i=0; i<string_len(s); i++ )
     if( isalpha( s[i] ) )
@@ -30,7 +30,7 @@ bool string_is_digit(const char *s) {
 }
 
 bool string_starts_with(const char *s, const char *prefix) {
-  register int i;
+  int i;
 
   for( i=0; i<string_len( prefix ); i++ )
     if( s[i] != prefix[i] )
