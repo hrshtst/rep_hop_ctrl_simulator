@@ -42,7 +42,7 @@ int vec_ring_size_decrease(vec_ring_t *self)
 
 void vec_ring_init(vec_ring_t *self, int dim, int size)
 {
-  register int i;
+  int i;
 
   vec_ring_head_reset( self );
   vec_ring_size_reset( self );
@@ -59,7 +59,7 @@ void vec_ring_init(vec_ring_t *self, int dim, int size)
 
 void vec_ring_destroy(vec_ring_t *self)
 {
-  register int i;
+  int i;
 
   if( !vec_ring_buf(self) ) return;
   for( i=0; i<vec_ring_capacity(self); i++ ){

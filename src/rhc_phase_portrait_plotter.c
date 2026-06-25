@@ -4,7 +4,7 @@
 #define PHASE_PORTRAIT_PLOTTER_BUFFER_SIZE 300
 ppp_t *ppp_init(ppp_t *self, cmd_t *cmd, ctrl_t *ctrl, model_t *model, logger_t *logger)
 {
-  register int i;
+  int i;
 
   self->dim = 2;
   ppp_cmd(self) = cmd;
@@ -81,7 +81,7 @@ void ppp_set_lim_xy(ppp_t *self, double xmin, double xmax, double ymin, double y
 
 void ppp_set_n_sc(ppp_t *self, int *n_sc)
 {
-  register int i;
+  int i;
 
   for( i=0; i<ppp_dim(self); i++ ){
     ppp_n_sc( self, i ) = n_sc[i];
@@ -138,7 +138,7 @@ void ppp_remove_p0(ppp_t *self, vec_t p0, double tol)
 
 void ppp_generate_edge_points_dec2bin(ppp_t *self, int dec, int bin[])
 {
-  register int i;
+  int i;
 
   i = 0;
   while( dec > 0 ){
@@ -151,7 +151,7 @@ void ppp_generate_edge_points_dec2bin(ppp_t *self, int dec, int bin[])
 void ppp_generate_edge_points_set_min_max(ppp_t *self, int ax, int ith, vec_t p0)
 {
   int bin[BUFSIZ];
-  register int i, j;
+  int i, j;
 
   memset( bin, 0, sizeof(int)*BUFSIZ );
   ppp_generate_edge_points_dec2bin( self, ith, bin );
@@ -165,7 +165,7 @@ void ppp_generate_edge_points_set_min_max(ppp_t *self, int ax, int ith, vec_t p0
 bool ppp_generate_edge_points_is_descending(ppp_t *self, int ax, int ith)
 {
   int bin[BUFSIZ];
-  register int i;
+  int i;
   int bin_sum = 0;
 
   memset( bin, 0, sizeof(int)*BUFSIZ );
@@ -192,7 +192,7 @@ void ppp_generate_edge_points_set_step(ppp_t *self, int ax, int i, bool descendi
 
 void ppp_generate_edge_points_on_each_axis(ppp_t *self, int ax)
 {
-  register int i, j;
+  int i, j;
   vec_t p0;
   bool is_descending;
 
@@ -210,7 +210,7 @@ void ppp_generate_edge_points_on_each_axis(ppp_t *self, int ax)
 
 void ppp_generate_edge_points(ppp_t *self)
 {
-  register int i;
+  int i;
 
   for( i=0; i<ppp_dim(self); i++ ){
     ppp_generate_edge_points_on_each_axis( self, i );
@@ -219,7 +219,7 @@ void ppp_generate_edge_points(ppp_t *self)
 
 bool ppp_simulator_is_converged(ppp_t *self, vec_t p, int num, double tol)
 {
-  register int i;
+  int i;
   int size;
 
   if( vec_ring_size( ppp_point_buf(self) ) <= num )
@@ -237,7 +237,7 @@ bool ppp_simulator_is_on_limit_cycle(ppp_t *self, vec_t p, double tol)
 {
   double k;
   vec_t v1, v2;
-  register int i;
+  int i;
 
   for( i=vec_ring_size( ppp_point_buf(self) )-1; i>0; i-- ){
     v1 = vec_ring_item( ppp_point_buf(self), i );
@@ -270,7 +270,7 @@ bool ppp_simulator_is_stable(ppp_t *self, vec_t p)
 
 bool __is_lower_any(vec_t v1, vec_t v2)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v1); i++ )
     if( vec_elem(v1,i) < vec_elem(v2,i) ) return true;
@@ -279,7 +279,7 @@ bool __is_lower_any(vec_t v1, vec_t v2)
 
 bool __is_greater_any(vec_t v1, vec_t v2)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v1); i++ )
     if( vec_elem(v1,i) > vec_elem(v2,i) ) return true;

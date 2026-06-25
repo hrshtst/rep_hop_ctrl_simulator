@@ -5,7 +5,7 @@ const double DT = 0.01;
 
 void write_data_header(mtoka_osci_t *osci)
 {
-  register int i;
+  int i;
 
   printf("t");
   for( i=1; i<=mtoka_osci_n_neuron(osci); i++ )
@@ -15,7 +15,7 @@ void write_data_header(mtoka_osci_t *osci)
 
 void write_data(mtoka_osci_t *osci)
 {
-  register int i;
+  int i;
 
   printf("%lf", mtoka_osci_time(osci));
   for( i=0; i<mtoka_osci_n_neuron(osci); i++ )

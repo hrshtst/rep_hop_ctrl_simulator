@@ -3,7 +3,7 @@
 static vec_t _vec_set_elem_vlist(vec_t v, va_list args);
 vec_t _vec_set_elem_vlist(vec_t v, va_list args)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v); i++ )
     vec_set_elem( v, i, (double)va_arg( args, double ) );
@@ -28,7 +28,7 @@ vec_t vec_set_elem_array(vec_t v, double array[])
 
 vec_t vec_fill(vec_t v, double val)
 {
-  register size_t i;
+  size_t i;
 
   for( i=0; i<vec_size(v); i++ )
     vec_set_elem( v, i, val );
@@ -186,7 +186,7 @@ vec_t vec_cat(vec_t v1, double k, vec_t v2, vec_t v)
 
 bool vec_match(vec_t v1, vec_t v2)
 {
-  register size_t i;
+  size_t i;
 
   if( vec_size(v1) != vec_size(v2) ) {
     RUNTIME_ERR( ERR_SIZMIS );
@@ -205,7 +205,7 @@ bool vec_equal(vec_t v1, vec_t v2)
 
 bool vec_near(vec_t v1, vec_t v2, double tol)
 {
-  register size_t i;
+  size_t i;
 
   if( vec_size(v1) != vec_size(v2) ) {
     RUNTIME_ERR( ERR_SIZMIS );
@@ -220,7 +220,7 @@ bool vec_near(vec_t v1, vec_t v2, double tol)
 double vec_dot(vec_t v1, vec_t v2)
 {
   double s = 0;
-  register size_t i;
+  size_t i;
 
   if( vec_size(v1) != vec_size(v2) ){
     RUNTIME_ERR( ERR_SIZMIS );
@@ -239,7 +239,7 @@ double vec_sqr_norm(vec_t v)
 double vec_sqr_dist(vec_t v1, vec_t v2)
 {
   double d = 0;
-  register size_t i;
+  size_t i;
 
   if( vec_size(v1) != vec_size(v2) ){
     RUNTIME_ERR( ERR_SIZMIS );
@@ -257,7 +257,7 @@ double vec_cos_sim(vec_t v1, vec_t v2)
 
 void vec_f_write(FILE *fp, vec_t v)
 {
-  register size_t i;
+  size_t i;
 
   if( !v ) return;
   for( i=0; i<vec_size(v); i++ )

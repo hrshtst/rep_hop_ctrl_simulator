@@ -173,7 +173,7 @@ typedef struct{
 TEST(test_mtoka_osci_init)
 {
   mtoka_osci_neuron_t *np;
-  register int i;
+  int i;
 
   ASSERT_EQ( 2, mtoka_osci_n_neuron(&osci) );
   ASSERT_PTRNE( NULL, osci.neurons );
@@ -205,7 +205,7 @@ TEST(test_mtoka_osci_init_specify_n_neuron)
   int n = 3;
   mtoka_osci_t osci_n;
   mtoka_osci_neuron_t *np;
-  register int i;
+  int i;
 
   mtoka_osci_init( &osci_n, n );
   ASSERT_EQ( n, mtoka_osci_n_neuron(&osci_n) );
@@ -605,7 +605,7 @@ TEST(test_mtoka_osci_reset)
 {
   double dt = 0.01;
   vec_t p = vec_create_list( 2, 4.3, 9.1 );
-  register int i;
+  int i;
 
   mtoka_osci_update_time( &osci, dt );
   vec_copy( p, mtoka_osci_membrane_potential(&osci) );
@@ -674,7 +674,7 @@ TEST(test_mtoka_osci_update_time)
 TEST(test_mtoka_osci_update)
 {
   double dt = 0.01;
-  register int i;
+  int i;
 
   ASSERT_EQ( 0.5, vec_elem(mtoka_osci_membrane_potential(&osci), 0) );
   ASSERT_EQ( 0, vec_elem(mtoka_osci_membrane_potential(&osci), 1) );

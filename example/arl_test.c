@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
   vec_t p0;
   double zh;
   vec_t zh_list;
-  register size_t i;
+  size_t i;
 
   cmd_default_init( &cmd );
   model_init( &model, 15 );
