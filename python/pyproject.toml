@@ -18,7 +18,11 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101", "D", "ANN", "PLR2004", "PLR0913", "INP001", "PT011", "ERA001"]
+"**/tests/**" = ["S101", "D", "ANN", "PLR2004", "PLR0913", "INP001", "PT011", "ERA001", "SLF001", "ARG001"]
+# GUI source: allow Qt naming/idioms (mixedCase signals, slot overrides,
+# widget constructors with many params, signal-forwarding lambdas, Greek
+# symbols in labels, and deferred Qt imports in the entry point).
+"**/rhc_demo/**" = ["N802", "N815", "PLR0913", "PLW0108", "RUF001", "PLC0415", "ARG001", "ANN001"]
 "**/__main__.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
