@@ -29,7 +29,11 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Dynamics Morphing — Standing ↔ Hopping")
-        self.driver = Driver(Params(), dt=0.001, z0=0.255, vz0=0.0)
+        # Start at the crouch bottom, which lies on the hopping limit cycle, so
+        # the default rho=1 mode begins hopping immediately rather than sitting
+        # at the unstable standing equilibrium.
+        params = Params()
+        self.driver = Driver(params, dt=0.001, z0=params.zb, vz0=0.0)
         self._trail_z: deque[float] = deque(maxlen=TRAIL_LEN)
         self._trail_vz: deque[float] = deque(maxlen=TRAIL_LEN)
 
