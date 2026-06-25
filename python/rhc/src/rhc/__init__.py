@@ -15,6 +15,7 @@ from rhc._rhc import (
     Event,
     Model,
     Phase,
+    Simulator,
     Vec,
     __version__,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "Event",
     "Model",
     "Phase",
+    "Simulator",
     "Vec",
     "__version__",
 ]

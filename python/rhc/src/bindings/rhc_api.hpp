@@ -11,7 +11,10 @@ extern "C" {
 #include "rhc_complex.h"
 #include "rhc_ctrl.h"
 #include "rhc_ctrl_dynmorph.h"
+#include "rhc_ctrl_raibert.h"
+#include "rhc_ctrl_regulator.h"
 #include "rhc_model.h"
+#include "rhc_simulator.h"
 #include "rhc_vec.h"
 }
 

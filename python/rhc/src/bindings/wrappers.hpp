@@ -59,4 +59,21 @@ struct Ctrl {
 // it dynmorph-specific methods on top of the shared Ctrl accessors.
 struct DynmorphCtrl : Ctrl {};
 
+// Owns a simulator_t (which owns its state vec_t). Borrows cmd/ctrl/model,
+// kept alive from the Python side via pybind11 keep_alive.
+struct Simulator {
+  simulator_t s{};
+  bool inited = false;
+
+  Simulator() = default;
+  ~Simulator() {
+    if (inited) {
+      simulator_destroy(&s);
+    }
+  }
+
+  Simulator(const Simulator &) = delete;
+  Simulator &operator=(const Simulator &) = delete;
+};
+
 }  // namespace rhcpy
