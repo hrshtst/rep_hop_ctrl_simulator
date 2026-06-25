@@ -1,12 +1,15 @@
 #include <pybind11/pybind11.h>
 
-namespace py = pybind11;
+#include "register.hpp"
 
-// Each binding area registers itself here as it is implemented, e.g.
-//   void register_vec(py::module_ &);
-// keeping this translation unit a thin assembly point.
+namespace py = pybind11;
 
 PYBIND11_MODULE(_rhc, m) {
   m.doc() = "Python bindings for the rep_hop_ctrl_simulator C library (rhc).";
   m.attr("__version__") = "0.1.0";
+
+  rhcpy::register_vec(m);
+  rhcpy::register_complex(m);
+  rhcpy::register_cmd(m);
+  rhcpy::register_model(m);
 }
