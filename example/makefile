@@ -5,7 +5,7 @@ INCLUDE=-I$(INCDIR)
 LINK=-lm -lrt
 
 CC=gcc
-CFLAGS=-Wall -O3 $(INCLUDE) -funroll-loops -MMD -MP
+CFLAGS=-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -O3 $(INCLUDE) -funroll-loops -MMD -MP
 
 OBJS_SRC=$(wildcard $(SRCDIR)/*.c)
 TARGET_SRC=$(wildcard *.c)

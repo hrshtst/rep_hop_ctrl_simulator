@@ -186,7 +186,7 @@ vec_t vec_cat(vec_t v1, double k, vec_t v2, vec_t v)
 
 bool vec_match(vec_t v1, vec_t v2)
 {
-  register int i;
+  register size_t i;
 
   if( vec_size(v1) != vec_size(v2) ) {
     RUNTIME_ERR( ERR_SIZMIS );
@@ -205,7 +205,7 @@ bool vec_equal(vec_t v1, vec_t v2)
 
 bool vec_near(vec_t v1, vec_t v2, double tol)
 {
-  register int i;
+  register size_t i;
 
   if( vec_size(v1) != vec_size(v2) ) {
     RUNTIME_ERR( ERR_SIZMIS );
@@ -220,7 +220,7 @@ bool vec_near(vec_t v1, vec_t v2, double tol)
 double vec_dot(vec_t v1, vec_t v2)
 {
   double s = 0;
-  register int i;
+  register size_t i;
 
   if( vec_size(v1) != vec_size(v2) ){
     RUNTIME_ERR( ERR_SIZMIS );
@@ -239,7 +239,7 @@ double vec_sqr_norm(vec_t v)
 double vec_sqr_dist(vec_t v1, vec_t v2)
 {
   double d = 0;
-  register int i;
+  register size_t i;
 
   if( vec_size(v1) != vec_size(v2) ){
     RUNTIME_ERR( ERR_SIZMIS );

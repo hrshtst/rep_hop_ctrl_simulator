@@ -14,7 +14,7 @@ double randf(double min, double max)
 
 void assert_vec(vec_t v1, vec_t v2)
 {
-  register int i;
+  register size_t i;
 
   ASSERT_EQ( vec_size(v1), vec_size(v2) );
   for( i=0; i< vec_size(v1); i++ )

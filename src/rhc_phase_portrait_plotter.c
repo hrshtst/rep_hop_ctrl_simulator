@@ -270,7 +270,7 @@ bool ppp_simulator_is_stable(ppp_t *self, vec_t p)
 
 bool __is_lower_any(vec_t v1, vec_t v2)
 {
-  register int i;
+  register size_t i;
 
   for( i=0; i<vec_size(v1); i++ )
     if( vec_elem(v1,i) < vec_elem(v2,i) ) return true;
@@ -279,7 +279,7 @@ bool __is_lower_any(vec_t v1, vec_t v2)
 
 bool __is_greater_any(vec_t v1, vec_t v2)
 {
-  register int i;
+  register size_t i;
 
   for( i=0; i<vec_size(v1); i++ )
     if( vec_elem(v1,i) > vec_elem(v2,i) ) return true;
