@@ -98,6 +98,12 @@ bool ctrl_events_is_in_flight(ctrl_events_t *self)
   return ctrl_events_is_in_rising( self ) || ctrl_events_is_in_falling( self );
 }
 
+bool ctrl_events_is_in_contact(ctrl_events_t *self)
+{
+  /* Contact (stance) phase is the union of compression and extension phases. */
+  return ctrl_events_is_in_compression( self ) || ctrl_events_is_in_extension( self );
+}
+
 enum _ctrl_events_phases_t _ctrl_events_determine_phase(double phi)
 {
   if( ( 0 <= phi ) && ( phi < PI_2 ) ){

@@ -59,6 +59,7 @@ bool ctrl_events_is_in_compression(ctrl_events_t *self);
 bool ctrl_events_is_in_extension(ctrl_events_t *self);
 bool ctrl_events_is_in_rising(ctrl_events_t *self);
 bool ctrl_events_is_in_flight(ctrl_events_t *self);
+bool ctrl_events_is_in_contact(ctrl_events_t *self);
 
 #define ctrl_events_phase(self) ( (self)->phase )
 #define ctrl_events_phi(self)   ( (self)->phi )

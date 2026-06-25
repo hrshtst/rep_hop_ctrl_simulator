@@ -270,6 +270,74 @@ TEST(test_simulator_run_specify_tag)
   ASSERT_STREQ( tag, simulator_tag( &sim ) );
 }
 
+#define ROLLOUT_CAP 200
+
+TEST(test_simulator_rollout_sample_count)
+{
+  double t[ROLLOUT_CAP], zr[ROLLOUT_CAP], vzr[ROLLOUT_CAP];
+  int n;
+
+  /* T/dt = 80 steps -> 80 recorded samples (matches simulator_run). */
+  vec_set_elem_list( z, 2, 0.28, 0.0 );
+  n = simulator_rollout( &sim, z, 0.8, 0.01, t, zr, vzr, NULL, NULL, ROLLOUT_CAP, NULL );
+  ASSERT_EQ( 80, n );
+  ASSERT_EQ( 1, simulator_n_trial( &sim ) );
+}
+
+TEST(test_simulator_rollout_first_sample_is_initial_state)
+{
+  double t[ROLLOUT_CAP], zr[ROLLOUT_CAP], vzr[ROLLOUT_CAP];
+
+  vec_set_elem_list( z, 2, 0.28, -0.5 );
+  simulator_rollout( &sim, z, 0.8, 0.01, t, zr, vzr, NULL, NULL, ROLLOUT_CAP, NULL );
+  ASSERT_EQ( 0.0, t[0] );
+  ASSERT_DOUBLE_EQ( 0.28, zr[0] );
+  ASSERT_DOUBLE_EQ( -0.5, vzr[0] );
+}
+
+TEST(test_simulator_rollout_respects_capacity)
+{
+  double t[ROLLOUT_CAP], zr[ROLLOUT_CAP], vzr[ROLLOUT_CAP];
+  int n;
+
+  /* Would record 80, but capacity caps it at 50. */
+  vec_set_elem_list( z, 2, 0.28, 0.0 );
+  n = simulator_rollout( &sim, z, 0.8, 0.01, t, zr, vzr, NULL, NULL, 50, NULL );
+  ASSERT_EQ( 50, n );
+}
+
+TEST(test_simulator_rollout_matches_manual_stepping)
+{
+  double t[ROLLOUT_CAP], zr[ROLLOUT_CAP], vzr[ROLLOUT_CAP];
+  int n, i;
+  double dt = 0.01;
+
+  vec_set_elem_list( z, 2, 0.28, 0.0 );
+  n = simulator_rollout( &sim, z, 0.8, dt, t, zr, vzr, NULL, NULL, ROLLOUT_CAP, NULL );
+
+  /* Reproduce the same trajectory by stepping by hand and confirm the
+   * rollout recorded exactly what a manual update loop produces. */
+  simulator_reset( &sim, NULL );
+  simulator_set_state( &sim, z );
+  for( i = 0; i < n; i++ ){
+    ASSERT_DOUBLE_EQ( i * dt, t[i] );
+    ASSERT_DOUBLE_EQ( vec_elem( simulator_state(&sim), 0 ), zr[i] );
+    ASSERT_DOUBLE_EQ( vec_elem( simulator_state(&sim), 1 ), vzr[i] );
+    simulator_update( &sim, dt, NULL );
+    simulator_update_time( &sim, dt );
+  }
+}
+
+TEST(test_simulator_rollout_accepts_null_arrays)
+{
+  int n;
+
+  /* All output arrays NULL: still runs and counts samples. */
+  vec_set_elem_list( z, 2, 0.28, 0.0 );
+  n = simulator_rollout( &sim, z, 0.8, 0.01, NULL, NULL, NULL, NULL, NULL, ROLLOUT_CAP, NULL );
+  ASSERT_EQ( 80, n );
+}
+
 TEST_SUITE(test_simulator)
 {
   CONFIGURE_SUITE( setup, teardown );
@@ -291,6 +359,11 @@ TEST_SUITE(test_simulator)
   RUN_TEST(test_simulator_run);
   RUN_TEST(test_simulator_run_multiple_times);
   RUN_TEST(test_simulator_run_specify_tag);
+  RUN_TEST(test_simulator_rollout_sample_count);
+  RUN_TEST(test_simulator_rollout_first_sample_is_initial_state);
+  RUN_TEST(test_simulator_rollout_respects_capacity);
+  RUN_TEST(test_simulator_rollout_matches_manual_stepping);
+  RUN_TEST(test_simulator_rollout_accepts_null_arrays);
 }
 
 int main(int argc, char *argv[])
