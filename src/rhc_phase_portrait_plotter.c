@@ -131,7 +131,7 @@ void ppp_remove_p0(ppp_t *self, vec_t p0, double tol)
     vec_list_node_destroy( node );
     sfree( node );
   } else{
-    sprintf( msg, "p0 not found: (%g, %g) ", vec_elem(p0,0), vec_elem(p0,1) );
+    snprintf( msg, sizeof(msg), "p0 not found: (%g, %g) ", vec_elem(p0,0), vec_elem(p0,1) );
     RUNTIME_WARN( msg );
   }
 }
