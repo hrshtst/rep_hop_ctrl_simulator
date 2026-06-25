@@ -1,0 +1,18 @@
+# uv virtual environment
+.venv/
+
+# scikit-build-core / build artifacts
+build/
+dist/
+wheelhouse/
+*.egg-info/
+_skbuild/
+
+# compiled extensions (live in the venv, never the source tree)
+*.so
+
+# caches
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
