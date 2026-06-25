@@ -6,6 +6,6 @@ re-exports them under the friendly ``rhc`` namespace.
 
 from __future__ import annotations
 
-from rhc._rhc import __version__
+from rhc._rhc import Cmd, Complex, Model, Vec, __version__
 
-__all__ = ["__version__"]
+__all__ = ["Cmd", "Complex", "Model", "Vec", "__version__"]
