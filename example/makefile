@@ -5,7 +5,16 @@ INCLUDE=-I$(INCDIR)
 LINK=-lm -lrt
 
 CC=gcc
-CFLAGS=-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -O3 $(INCLUDE) -funroll-loops -MMD -MP
+WARN=-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
+# Build DEBUG=y for an unoptimized build with symbols (gdb/valgrind).
+# Run `make clean` when switching DEBUG on/off, as objects are not
+# rebuilt on flag changes alone.
+ifeq ($(DEBUG),y)
+OPT=-O0 -g
+else
+OPT=-O3 -funroll-loops
+endif
+CFLAGS=$(WARN) $(OPT) $(INCLUDE) -MMD -MP
 
 OBJS_SRC=$(wildcard $(SRCDIR)/*.c)
 TARGET_SRC=$(wildcard *.c)
