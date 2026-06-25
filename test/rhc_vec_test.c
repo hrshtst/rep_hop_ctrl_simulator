@@ -122,7 +122,7 @@ TEST(test_vec_set_elem_list)
 void check_vec_set_elem_array(size_t n, double *elem)
 {
   vec_t v;
-  register int i;
+  register size_t i;
 
   v = vec_create( n );
   vec_set_elem_array( v, elem );
