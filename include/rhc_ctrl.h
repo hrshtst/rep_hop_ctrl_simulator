@@ -6,24 +6,33 @@
 #include "rhc_model.h"
 #include "rhc_vec.h"
 
+/* The tuple struct and phase enum are defined at file scope (rather than
+ * inline inside ctrl_events_t) so this header is valid C++ as well as C:
+ * in C++ a type declared inside a struct does not leak to the enclosing
+ * scope, but ctrl_events_get_phase_string() and _ctrl_events_determine_phase()
+ * refer to enum _ctrl_events_phases_t at file scope. The struct/enum names
+ * and the event member names are unchanged. */
+
+/* Events are determined by the current position and velocity and the
+ * highest position when standing (zh). */
+struct _ctrl_events_tuple_t {
+  double t, z, v;
+};
+
+/* Phases are determined by the current phase value, i.e. phi. Note that
+ * which phase an event belongs to can not be identified uniquely due to
+ * digitalization. It means that, for instances, a bottom event may be
+ * updated during extension phase. */
+enum _ctrl_events_phases_t {
+  invalid=-1, falling=0, compression, extension, rising,
+};
+
 typedef struct {
-  /* Events are determined by the current position and velocity and
-   * the highest position when standing (zh). */
-  struct _ctrl_events_tuple_t {
-    double t, z, v;
-  } ctrl_events_tuple_t;
   struct _ctrl_events_tuple_t apex;
   struct _ctrl_events_tuple_t touchdown;
   struct _ctrl_events_tuple_t bottom;
   struct _ctrl_events_tuple_t liftoff;
 
-  /* Phases are determined by the current phase value, i.e. phi. Note
-   * that which phase an event belongs to can not be identified
-   * uniquely due to digitalization. It means that, for instances, a
-   * bottom event may be updated during extension phase. */
-  enum _ctrl_events_phases_t {
-    invalid=-1, falling=0, compression, extension, rising,
-  } _ctrl_events_phases_t;
   enum _ctrl_events_phases_t phase;
   double phi;  /* stores the calculated phase value */
   int n;       /* counts how many it reaches apex */

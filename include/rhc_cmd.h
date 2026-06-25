@@ -3,28 +3,38 @@
 
 #include "rhc_misc.h"
 
+/* The per-controller parameter structs are defined at file scope (rather
+ * than inline inside the anonymous union below) so that this header is
+ * valid C++ as well as C: C++ forbids declaring types inside an anonymous
+ * union. The struct names and the cmd_t member layout are unchanged. */
+struct _regulator {
+  double q1, q2;
+};
+struct _dynmorph {
+  double rho, k;
+  bool soft_landing;
+};
+struct _raibert {
+  double delta, tau, gamma, yeta1, zr, mu;
+};
+struct _arl {
+  double k, beta;
+};
+struct _mtoka {
+  double tau, T, a, b, c, th, mu, rho, lam;
+};
+
 typedef struct{
   double za;       /* apex height */
   double zh;       /* lift-off height */
   double zm;       /* standing height */
   double zb;       /* crouching height */
   union {
-    struct _regulator {
-      double q1, q2;
-    } regulator;
-    struct _dynmorph {
-      double rho, k;
-      bool soft_landing;
-    } dynmorph;
-    struct _raibert {
-      double delta, tau, gamma, yeta1, zr, mu;
-    } raibert;
-    struct _arl {
-      double k, beta;
-    } arl;
-    struct _mtoka {
-      double tau, T, a, b, c, th, mu, rho, lam;
-    } mtoka;
+    struct _regulator regulator;
+    struct _dynmorph dynmorph;
+    struct _raibert raibert;
+    struct _arl arl;
+    struct _mtoka mtoka;
   };
 } cmd_t;
 
