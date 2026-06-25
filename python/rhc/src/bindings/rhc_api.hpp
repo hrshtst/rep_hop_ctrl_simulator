@@ -10,6 +10,7 @@ extern "C" {
 #include "rhc_cmd.h"
 #include "rhc_complex.h"
 #include "rhc_ctrl.h"
+#include "rhc_ctrl_dynmorph.h"
 #include "rhc_model.h"
 #include "rhc_vec.h"
 }
