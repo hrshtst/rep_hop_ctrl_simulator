@@ -37,4 +37,26 @@ struct Vec {
   [[nodiscard]] std::size_t size() const { return vec_size(v); }
 };
 
+// Base wrapper around a ctrl_t. The concrete controller is built in place
+// by a *_create function; ctrl_destroy() dispatches to the right teardown
+// via the controller's _destroy function pointer.
+struct Ctrl {
+  ctrl_t c{};
+  bool created = false;
+
+  Ctrl() = default;
+  virtual ~Ctrl() {
+    if (created) {
+      ctrl_destroy(&c);
+    }
+  }
+
+  Ctrl(const Ctrl &) = delete;
+  Ctrl &operator=(const Ctrl &) = delete;
+};
+
+// The dynamics-morphing controller. Distinct C++ type so pybind11 can give
+// it dynmorph-specific methods on top of the shared Ctrl accessors.
+struct DynmorphCtrl : Ctrl {};
+
 }  // namespace rhcpy

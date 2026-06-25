@@ -12,4 +12,6 @@ PYBIND11_MODULE(_rhc, m) {
   rhcpy::register_complex(m);
   rhcpy::register_cmd(m);
   rhcpy::register_model(m);
+  rhcpy::register_ctrl(m);
+  rhcpy::register_dynmorph(m);
 }
