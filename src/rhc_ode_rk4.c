@@ -8,13 +8,24 @@ ode_t *ode_init_rk4(ode_t *self, int dim, vec_t (* f)(double,vec_t,void*,vec_t))
 {
   _ode_rk4 *ws;
 
-  if( !( ws = nalloc( _ode_rk4, 1 ) )   ||
-      !( ws->x = vec_create( dim ) )    ||
+  if( ( ws = nalloc( _ode_rk4, 1 ) ) == NULL ){
+    ALLOC_ERR();
+    return NULL;
+  }
+  /* ws is calloc'd, so any vec not yet created is NULL and safe to pass
+     to vec_destroy() during cleanup. */
+  if( !( ws->x = vec_create( dim ) )    ||
       !( ws->k[0] = vec_create( dim ) ) ||
       !( ws->k[1] = vec_create( dim ) ) ||
       !( ws->k[2] = vec_create( dim ) ) ||
       !( ws->k[3] = vec_create( dim ) ) ){
     ALLOC_ERR();
+    vec_destroy( ws->x );
+    vec_destroy( ws->k[0] );
+    vec_destroy( ws->k[1] );
+    vec_destroy( ws->k[2] );
+    vec_destroy( ws->k[3] );
+    free( ws );
     return NULL;
   }
   self->f = f;

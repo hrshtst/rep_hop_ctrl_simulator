@@ -52,6 +52,7 @@ vec_t vec_create(size_t size)
   if( size > 0 ){
     if( ( v->elem = nalloc( double, size ) ) == NULL ){
       ALLOC_ERR();
+      free( v );
       return NULL;
     }
   } else
