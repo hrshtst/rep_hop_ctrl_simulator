@@ -57,6 +57,8 @@ target-version = "py310"
 select = ["ALL"]
 ignore = [
   "D1",
+  "COM812",                     # Conflicts with the formatter (trailing comma)
+  "ISC001",                     # Conflicts with the formatter (implicit string concat)
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
