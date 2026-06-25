@@ -65,7 +65,7 @@ TEST(test_ode_rk4_update)
 
 TEST(test_ode_rk4_integrate)
 {
-  char msg[BUFSIZ];
+  char msg[RHC_BUFSIZ];
 
   for( t=0; t<T; t+=DT ){
     ode_update( &ode, t, x, DT, NULL );

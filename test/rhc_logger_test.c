@@ -20,7 +20,7 @@ void assert_file(const char *filename, const char *expected_lines[], size_t n_li
     FAIL( "Error opening file" );
   }
 
-  char buffer[BUFSIZ]; // Buffer to hold each line from the file
+  char buffer[RHC_BUFSIZ]; // Buffer to hold each line from the file
   size_t i = 0;
 
   while( fgets( buffer, sizeof(buffer), fp ) ){
@@ -38,9 +38,9 @@ void assert_file(const char *filename, const char *expected_lines[], size_t n_li
 
     // Compare the file line with the corresponding provided line
     if( strcmp(buffer, expected_lines[i] ) != 0 ){
-      char msg[BUFSIZ];
+      char msg[RHC_BUFSIZ];
       fclose(fp);
-      snprintf( msg, BUFSIZ,
+      snprintf( msg, RHC_BUFSIZ,
                 "Line #%zu:\nExpected: %s\n But was: %s",
                 i, expected_lines[i], buffer );
       FAIL( msg );

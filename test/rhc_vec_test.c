@@ -953,7 +953,7 @@ TEST(test_vec_cos_sim)
 void check_vec_f_write(size_t n, double *val)
 {
   vec_t v;
-  char expected[BUFSIZ], actual[BUFSIZ], str[BUFSIZ];
+  char expected[RHC_BUFSIZ], actual[RHC_BUFSIZ], str[RHC_BUFSIZ];
   FILE *fp;
   size_t i;
 
@@ -970,7 +970,7 @@ void check_vec_f_write(size_t n, double *val)
   vec_f_write( fp, v );
   /* then */
   rewind( fp );
-  if( fgets( actual, BUFSIZ, fp ) == NULL )
+  if( fgets( actual, RHC_BUFSIZ, fp ) == NULL )
     FAIL( "failure on 'fgets'" );
   ASSERT_STREQ( expected, actual );
   /* clean */

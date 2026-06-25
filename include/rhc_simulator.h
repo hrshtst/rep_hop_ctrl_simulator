@@ -23,7 +23,7 @@ typedef struct _simulator_t{
   bool (*reset_fp)(struct _simulator_t*, void*);
   bool (*update_fp)(struct _simulator_t*, double, void*);
   void (*dump_fp)(struct _simulator_t*, logger_t*, void*);
-  char tag[BUFSIZ];
+  char tag[RHC_BUFSIZ];
 } simulator_t;
 
 #define simulator_cmd(self)   (self)->cmd

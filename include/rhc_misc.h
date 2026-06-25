@@ -28,16 +28,16 @@ static inline double sqr(double x){ return x * x; }
 #define eprintf(fmt,...) fprintf( stderr, fmt, ##__VA_ARGS__ )
 
 extern bool __err_echo;
-extern char __err_last_msg[BUFSIZ];
+extern char __err_last_msg[RHC_BUFSIZ];
 #define ECHO_ON()  ( __err_echo = true )
 #define ECHO_OFF() ( __err_echo = false )
 
 #define RUNTIME_ERR(msg,...) do{\
-  snprintf( __err_last_msg, BUFSIZ, "%s", msg );\
+  snprintf( __err_last_msg, RHC_BUFSIZ, "%s", msg );\
   __err_echo ? eprintf( "Error: %s(%s)\n", ##__VA_ARGS__, __err_last_msg, __FUNCTION__ ) : 0;\
 } while( 0 )
 #define RUNTIME_WARN(msg,...) do{\
-  snprintf( __err_last_msg, BUFSIZ, "%s", msg );\
+  snprintf( __err_last_msg, RHC_BUFSIZ, "%s", msg );\
   __err_echo ? eprintf( "Warning: %s(%s)\n", ##__VA_ARGS__, __err_last_msg, __FUNCTION__ ) : 0;\
 } while( 0 )
 #define RESET_ERR_MSG() ( __err_last_msg[0] = '\0' )

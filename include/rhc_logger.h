@@ -12,7 +12,7 @@ typedef void (*logger_writer_fp_t)(FILE* fp, simulator_t *simulator, void *util)
 #define EOL_BUFSIZ 8
 
 typedef struct{
-  char filename[BUFSIZ];
+  char filename[RHC_BUFSIZ];
   FILE* fp;
   logger_header_fp_t header;
   logger_writer_fp_t writer;

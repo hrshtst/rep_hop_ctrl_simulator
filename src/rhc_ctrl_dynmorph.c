@@ -178,7 +178,7 @@ double ctrl_dynmorph_calc_phi_based_param(ctrl_t *self, double phi, double v1, d
 
 void ctrl_dynmorph_print_params(FILE *fp, ctrl_t *self, vec_t p, const char *sep)
 {
-  char s[BUFSIZ];
+  char s[RHC_BUFSIZ];
 
   if( sep ){
     fprintf( fp, "%s\n", sep );
