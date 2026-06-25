@@ -334,6 +334,52 @@ TEST(test_ctrl_events_is_in_flight)
   }
 }
 
+TEST(test_ctrl_events_is_in_contact)
+{
+  struct case_t {
+    double za, zh, zb;
+    double z, v;
+    bool expected;
+  } cases[] = {
+    /* za ,  zh ,  zb ,    z ,     v , expected */
+    { 0.28, 0.26, 0.24, 0.280,  0.000, false },  /* initial (falling) */
+    { 0.28, 0.26, 0.24, 0.270, -0.010, false },  /* falling */
+    { 0.28, 0.26, 0.24, 0.260, -0.030, true  },  /* touchdown (compression) */
+    { 0.28, 0.26, 0.24, 0.250, -0.020, true  },  /* compression */
+    { 0.28, 0.26, 0.24, 0.240,  0.000, true  },  /* bottom (extension) */
+    { 0.28, 0.26, 0.24, 0.250,  0.020, true  },  /* extension */
+    { 0.28, 0.26, 0.24, 0.260,  0.030, false },  /* lift-off (rising) */
+    { 0.28, 0.26, 0.24, 0.265,  0.025, false },  /* rising */
+    {    0,    0,    0,     0,      0, false },  /* terminator */
+  };
+  struct case_t *c;
+
+  for( c=cases; c->za>0; c++ ){
+    cmd.za = c->za;
+    cmd.zh = c->zh;
+    cmd.zb = c->zb;
+    vec_set_elem_list( p, c->z, c->v );
+    ctrl_events_update( &events, 0, p, &cmd, G );
+    if( c->expected )
+      ASSERT_TRUE( ctrl_events_is_in_contact( &events ) );
+    else
+      ASSERT_FALSE( ctrl_events_is_in_contact( &events ) );
+    /* Contact and flight partition the non-invalid phases. */
+    ASSERT_EQ( ctrl_events_is_in_contact( &events ),
+               !ctrl_events_is_in_flight( &events ) );
+    ctrl_events_update_next( &events );
+  }
+}
+
+TEST(test_ctrl_events_is_in_contact_invalid)
+{
+  /* A freshly initialised events object has the invalid phase, which is
+   * neither flight nor contact. */
+  ctrl_events_init( &events );
+  ASSERT_FALSE( ctrl_events_is_in_contact( &events ) );
+  ASSERT_FALSE( ctrl_events_is_in_flight( &events ) );
+}
+
 TEST(test_ctrl_events_is_in_compression)
 {
   struct case_t {
@@ -1223,6 +1269,8 @@ TEST_SUITE(test_ctrl_events)
   RUN_TEST(test_ctrl_events_is_in_rising);
   RUN_TEST(test_ctrl_events_is_in_falling);
   RUN_TEST(test_ctrl_events_is_in_flight);
+  RUN_TEST(test_ctrl_events_is_in_contact);
+  RUN_TEST(test_ctrl_events_is_in_contact_invalid);
   RUN_TEST(test_ctrl_events_is_in_compression);
   RUN_TEST(test_ctrl_events_is_in_extension);
   RUN_TEST(test_ctrl_events_update_phase);

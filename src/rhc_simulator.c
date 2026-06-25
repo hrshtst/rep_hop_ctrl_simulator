@@ -138,6 +138,31 @@ void simulator_run(simulator_t *self, vec_t p0, double time, double dt, logger_t
   simulator_inc_trial( self );
 }
 
+int simulator_rollout(simulator_t *self, vec_t p0, double time, double dt,
+                      double *t, double *z, double *vz, double *fz, int *phase,
+                      int capacity, void *util)
+{
+  int n = 0;
+
+  if( !simulator_reset( self, util ) ) return 0;
+  simulator_set_state( self, p0 );
+  if( simulator_has_default_tag( self ) )
+    simulator_update_default_tag( self );
+  while( simulator_time(self) < time && n < capacity ){
+    if( t )     t[n]     = simulator_time( self );
+    if( z )     z[n]     = vec_elem( simulator_state(self), 0 );
+    if( vz )    vz[n]    = vec_elem( simulator_state(self), 1 );
+    if( fz )    fz[n]    = ctrl_fz( simulator_ctrl(self) );
+    if( phase ) phase[n] = (int)ctrl_phase( simulator_ctrl(self) );
+    n++;
+    if( !self->update_fp( self, dt, util ) )
+      break;
+    simulator_update_time( self, dt );
+  }
+  simulator_inc_trial( self );
+  return n;
+}
+
 void simulator_header_default(FILE *fp, simulator_t *s, void *util)
 {
   /* simulator, states, model */

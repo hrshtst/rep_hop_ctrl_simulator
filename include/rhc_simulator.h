@@ -59,6 +59,19 @@ bool simulator_update(simulator_t *self, double dt, void *util);
 void simulator_update_time(simulator_t *self, double dt);
 void simulator_run(simulator_t *self, vec_t p0, double time, double dt, logger_t *logger, void *util);
 
+/* Runs a simulation like simulator_run but, instead of dumping to a
+ * logger, records the per-step time series into caller-provided arrays
+ * (each may be NULL to skip that column): t, z (=state[0]), vz
+ * (=state[1]), fz (ground reaction force), and phase (the controller
+ * phase enum as int). Samples are recorded at the same point as the
+ * dump in simulator_run (before each integration step), up to
+ * `capacity` samples or until `time` is reached, whichever comes first.
+ * Returns the number of samples written. This keeps live consumers
+ * (e.g. Python bindings) free of any file I/O. */
+int simulator_rollout(simulator_t *self, vec_t p0, double time, double dt,
+                      double *t, double *z, double *vz, double *fz, int *phase,
+                      int capacity, void *util);
+
 void simulator_header_default(FILE* fp, simulator_t *self, void *util);
 void simulator_writer_default(FILE* fp, simulator_t *self, void *util);
 void simulator_set_default_logger(simulator_t *self, logger_t *logger);
