@@ -72,6 +72,26 @@ Available example programs:
 
 The controllers live in `include/rhc_ctrl_*.h` and `src/rhc_ctrl_*.c`.
 
+## Python bindings & demo app
+
+The `python/` directory is a [`uv`](https://docs.astral.sh/uv/) workspace with
+pybind11 bindings of the C library (`rhc`) and a PyQt6 application (`rhc-demo`)
+that demonstrates the dynamics-morphing standing/hopping controller from the
+paper in `resources/`: a 2D biped animation of COM height and contact state, a
+live `(z, ż)` phase portrait, and sliders that morph **ρ** between standing
+(ρ=0, an equilibrium point) and hopping (ρ=1, a limit cycle).
+
+```shell
+cd python
+uv sync          # builds the rhc extension and installs both packages
+uv run rhc-demo  # launch the demo
+```
+
+Drag **ρ** from 1 → 0 to morph from hopping to standing, change **z̃a** to
+retarget the apex live, press **Disturb ↑** to perturb the COM in flight, and
+**Reset** to restart. Run the Python tests with `uv run pytest`. See
+[`python/README.md`](python/README.md) for details.
+
 ## Project layout
 
 ```
@@ -80,6 +100,7 @@ src/          library implementation (rhc_*.c)
 test/         unit tests and the run_test.sh runner
 example/      example programs and run_example.sh
   graph_plot/ Python plotting scripts (managed with uv)
+python/       uv workspace: pybind11 bindings (rhc) and the PyQt6 demo (rhc-demo)
 ```
 
 ## License
