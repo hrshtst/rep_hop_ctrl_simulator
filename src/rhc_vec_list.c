@@ -16,22 +16,22 @@ void vec_list_node_destroy(vec_list_node_t *self)
   self->next = NULL;
 }
 
-vec_list_node_t *vec_list_node_insert_prev(vec_list_node_t *self, vec_list_node_t *new)
+vec_list_node_t *vec_list_node_insert_prev(vec_list_node_t *self, vec_list_node_t *node_new)
 {
-  new->next = self;
-  self->prev->next = new;
-  new->prev = self->prev;
-  self->prev = new;
-  return new;
+  node_new->next = self;
+  self->prev->next = node_new;
+  node_new->prev = self->prev;
+  self->prev = node_new;
+  return node_new;
 }
 
-vec_list_node_t *vec_list_node_insert_next(vec_list_node_t *self, vec_list_node_t *new)
+vec_list_node_t *vec_list_node_insert_next(vec_list_node_t *self, vec_list_node_t *node_new)
 {
-  new->prev = self;
-  self->next->prev = new;
-  new->next = self->next;
-  self->next = new;
-  return new;
+  node_new->prev = self;
+  self->next->prev = node_new;
+  node_new->next = self->next;
+  self->next = node_new;
+  return node_new;
 }
 
 vec_list_node_t *vec_list_node_delete_prev(vec_list_node_t *self)
@@ -87,16 +87,16 @@ void vec_list_destroy(vec_list_t *self)
   }
 }
 
-vec_list_node_t *vec_list_insert_prev(vec_list_t *self, vec_list_node_t *node, vec_list_node_t *new)
+vec_list_node_t *vec_list_insert_prev(vec_list_t *self, vec_list_node_t *node, vec_list_node_t *node_new)
 {
   vec_list_inc( self );
-  return vec_list_node_insert_prev( node, new );
+  return vec_list_node_insert_prev( node, node_new );
 }
 
-vec_list_node_t *vec_list_insert_next(vec_list_t *self, vec_list_node_t *node, vec_list_node_t *new)
+vec_list_node_t *vec_list_insert_next(vec_list_t *self, vec_list_node_t *node, vec_list_node_t *node_new)
 {
   vec_list_inc( self );
-  return vec_list_node_insert_next( node, new );
+  return vec_list_node_insert_next( node, node_new );
 }
 
 vec_list_node_t *vec_list_delete_prev(vec_list_t *self, vec_list_node_t *node)
