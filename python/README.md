@@ -12,12 +12,35 @@ A `uv` workspace with two packages:
   between standing (ρ=0, an equilibrium point) and hopping (ρ=1, a limit cycle)
   and retarget the apex/standing/crouching heights on the fly.
 
-## Setup
+## Building from a clean checkout
+
+Requires [`uv`](https://docs.astral.sh/uv/) and a C/C++ compiler (`gcc`/`g++`);
+CMake/Ninja are fetched automatically by the build backend.
 
 ```sh
 cd python
-uv sync          # builds the rhc extension and installs both packages
+uv sync
 ```
+
+`uv sync` creates the virtual environment, compiles the C library sources
+(`../src/*.c`) together with the pybind11 bindings into the `rhc._rhc` extension
+(via scikit-build-core/CMake), and installs both `rhc` and `rhc-demo` as
+editable packages.
+
+## Rebuilding after a C change
+
+The compiled extension is built once and cached. Editing the C library
+(`../src/*.c`, `../include/*.h`) or the binding sources (`rhc/src/bindings/*`)
+does **not** trigger an automatic rebuild — force one with:
+
+```sh
+cd python
+uv sync --reinstall-package rhc
+```
+
+CMake recompiles only the changed files and the extension is reinstalled.
+(Pure-Python edits to the `rhc`/`rhc_demo` packages are editable and need no
+rebuild.)
 
 ## Run the demo
 
