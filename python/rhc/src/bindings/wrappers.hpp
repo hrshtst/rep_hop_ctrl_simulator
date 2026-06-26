@@ -76,4 +76,60 @@ struct Simulator {
   Simulator &operator=(const Simulator &) = delete;
 };
 
+// Marker subclasses for the other controllers (same lifetime model as Ctrl).
+struct RaibertCtrl : Ctrl {};
+struct RegulatorCtrl : Ctrl {};
+
+// Owns a logger_t (whose only resource is its FILE*).
+struct Logger {
+  logger_t l{};
+  bool inited = false;
+
+  Logger() = default;
+  ~Logger() {
+    if (inited) {
+      if (logger_is_open(&l)) {
+        logger_close(&l);
+      }
+      logger_destroy(&l);
+    }
+  }
+
+  Logger(const Logger &) = delete;
+  Logger &operator=(const Logger &) = delete;
+};
+
+// Owns an ode_t and the Python right-hand side it calls each step.
+struct Ode {
+  ode_t o{};
+  bool inited = false;
+  pybind11::function f;
+
+  Ode() = default;
+  ~Ode() {
+    if (inited && o._ws != nullptr) {
+      ode_destroy(&o);
+    }
+  }
+
+  Ode(const Ode &) = delete;
+  Ode &operator=(const Ode &) = delete;
+};
+
+// Owns a phase-portrait plotter (ppp_t).
+struct PPP {
+  ppp_t p{};
+  bool inited = false;
+
+  PPP() = default;
+  ~PPP() {
+    if (inited) {
+      ppp_destroy(&p);
+    }
+  }
+
+  PPP(const PPP &) = delete;
+  PPP &operator=(const PPP &) = delete;
+};
+
 }  // namespace rhcpy
