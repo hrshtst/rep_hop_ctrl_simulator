@@ -14,5 +14,10 @@ PYBIND11_MODULE(_rhc, m) {
   rhcpy::register_model(m);
   rhcpy::register_ctrl(m);
   rhcpy::register_dynmorph(m);
+  rhcpy::register_raibert(m);
+  rhcpy::register_regulator(m);
   rhcpy::register_simulator(m);
+  rhcpy::register_logger(m);
+  rhcpy::register_ode(m);
+  rhcpy::register_ppp(m);
 }
