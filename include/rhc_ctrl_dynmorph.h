@@ -34,9 +34,11 @@ typedef struct{
 
 #define ctrl_dynmorph_rho(self)         ( ctrl_cmd(self)->dynmorph.rho )
 #define ctrl_dynmorph_k(self)           ( ctrl_cmd(self)->dynmorph.k )
+#define ctrl_dynmorph_q_scale(self)     ( ctrl_cmd(self)->dynmorph.q_scale )
 #define ctrl_dynmorph_soft_landing(self) ( ctrl_cmd(self)->dynmorph.soft_landing )
 #define ctrl_dynmorph_set_rho(self,val) ( ctrl_dynmorph_rho(self) = (val) )
 #define ctrl_dynmorph_set_k(self,val)   ( ctrl_dynmorph_k(self) = (val) )
+#define ctrl_dynmorph_set_q_scale(self,val) ( ctrl_dynmorph_q_scale(self) = (val) )
 #define ctrl_dynmorph_enable_soft_landing(self) ( ctrl_dynmorph_soft_landing(self) = true )
 #define ctrl_dynmorph_disable_soft_landing(self) ( ctrl_dynmorph_soft_landing(self) = false )
 

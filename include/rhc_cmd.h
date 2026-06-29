@@ -13,7 +13,7 @@ typedef struct{
       double q1, q2;
     } regulator;
     struct _dynmorph {
-      double rho, k;
+      double rho, k, q_scale;
       bool soft_landing;
     } dynmorph;
     struct _raibert {
