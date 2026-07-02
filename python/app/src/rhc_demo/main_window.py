@@ -6,6 +6,7 @@ from collections import deque
 
 import numpy as np
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from rhc_demo.biped_widget import BipedWidget
@@ -13,14 +14,18 @@ from rhc_demo.controls import ControlsPanel
 from rhc_demo.driver import Driver, Params
 from rhc_demo.field import build_field
 from rhc_demo.phase_widget import PhaseWidget
+from rhc_demo.timeseries_widget import WINDOW_S, TimeSeriesWidget
 
 FRAME_MS = 16
+SIM_DT = 1e-4  # matches the paper's integration step
 TRAIL_LEN = 1500
 FIELD_DEBOUNCE_MS = 150
 FIELD_DURATION = 1.0
 FIELD_DT = 4e-4
-DISTURB_FORCE = 120.0  # N, applied upward for a short window
-DISTURB_DURATION = 0.05  # s
+# The paper's Simulation IV force pulses.
+DISTURB_UP_FORCE = 400.0  # N, applied for a short window (press in flight)
+DISTURB_DOWN_FORCE = -500.0  # N (press during stance)
+DISTURB_DURATION = 0.02  # s
 
 
 class MainWindow(QMainWindow):
@@ -33,15 +38,21 @@ class MainWindow(QMainWindow):
         # the default rho=1 mode begins hopping immediately rather than sitting
         # at the unstable standing equilibrium.
         params = Params()
-        self.driver = Driver(params, dt=0.001, z0=params.zb, vz0=0.0)
+        self.driver = Driver(params, dt=SIM_DT, z0=params.zb, vz0=0.0)
         self._trail_z: deque[float] = deque(maxlen=TRAIL_LEN)
         self._trail_vz: deque[float] = deque(maxlen=TRAIL_LEN)
+        ts_len = int(WINDOW_S * 1000.0 / FRAME_MS) + 2
+        self._ts_t: deque[float] = deque(maxlen=ts_len)
+        self._ts_z: deque[float] = deque(maxlen=ts_len)
+        self._ts_fz: deque[float] = deque(maxlen=ts_len)
 
         self.biped = BipedWidget()
         self.phase = PhaseWidget()
+        self.timeseries = TimeSeriesWidget()
         self.controls = ControlsPanel(self.driver.params)
         self._build_layout()
         self._connect_controls()
+        self._make_shortcuts()
 
         self._field_timer = QTimer(self)
         self._field_timer.setSingleShot(True)
@@ -60,7 +71,8 @@ class MainWindow(QMainWindow):
         viz_top.addWidget(self.biped, 1)
         viz_top.addWidget(self.phase, 2)
         viz = QVBoxLayout()
-        viz.addLayout(viz_top)
+        viz.addLayout(viz_top, 2)
+        viz.addWidget(self.timeseries, 1)
         root = QHBoxLayout()
         root.addWidget(self.controls, 0)
         root.addLayout(viz, 1)
@@ -77,8 +89,14 @@ class MainWindow(QMainWindow):
         c.zhChanged.connect(self._on_zh)
         c.kChanged.connect(self._on_k)
         c.massChanged.connect(self._on_mass)
-        c.disturbanceRequested.connect(self._on_disturb)
+        c.softLandingChanged.connect(lambda on: self._on_soft_landing(enabled=on))
+        c.disturbUpRequested.connect(self._on_disturb_up)
+        c.disturbDownRequested.connect(self._on_disturb_down)
         c.resetRequested.connect(self._on_reset)
+
+    def _make_shortcuts(self) -> None:
+        for key, slot in (("U", self._on_disturb_up), ("D", self._on_disturb_down), ("R", self._on_reset)):
+            QShortcut(QKeySequence(key), self).activated.connect(slot)
 
     # -- animation --
     def tick(self) -> None:
@@ -87,8 +105,17 @@ class MainWindow(QMainWindow):
         snap = self.driver.snapshot()
         self._trail_z.append(snap.z)
         self._trail_vz.append(snap.vz)
+        self._ts_t.append(snap.t)
+        self._ts_z.append(snap.z)
+        self._ts_fz.append(snap.fz_peak)
         self.biped.set_state(snap.z, contact=snap.contact, zh=self.driver.params.zh, za=self.driver.params.za)
         self.phase.update_live(np.fromiter(self._trail_z, dtype=float), np.fromiter(self._trail_vz, dtype=float))
+        times = np.fromiter(self._ts_t, dtype=float)
+        self.timeseries.update_live(
+            times - snap.t,
+            np.fromiter(self._ts_z, dtype=float),
+            np.fromiter(self._ts_fz, dtype=float),
+        )
         self.controls.set_readout(self._readout(snap))
 
     @staticmethod
@@ -99,12 +126,13 @@ class MainWindow(QMainWindow):
             f"z = {snap.z:.3f} m,  vz = {snap.vz:+.3f} m/s\n"
             f"phase: {mode},  {'contact' if snap.contact else 'flight'}\n"
             f"fz = {snap.fz:6.1f} N,  hops: {snap.n}\n"
-            f"adjusted: za={snap.param_za:.3f} zm={snap.param_zm:.3f} zb={snap.param_zb:.3f}"
+            f"adjusted: ρ={snap.param_rho:.2f} za={snap.param_za:.3f} zm={snap.param_zm:.3f} zb={snap.param_zb:.3f}"
         )
 
     def recompute_field(self) -> None:
         field = build_field(self.driver.params, duration=FIELD_DURATION, dt=FIELD_DT)
         self.phase.set_field(field, self.driver.params)
+        self.timeseries.set_guides(self.driver.params)
 
     def _schedule_field(self) -> None:
         self._field_timer.start()
@@ -138,11 +166,21 @@ class MainWindow(QMainWindow):
         self.driver.set_mass(v)
         self._schedule_field()
 
-    def _on_disturb(self) -> None:
-        self.driver.apply_disturbance(DISTURB_FORCE, DISTURB_DURATION)
+    def _on_soft_landing(self, *, enabled: bool) -> None:
+        self.driver.set_soft_landing(enabled=enabled)
+        self._schedule_field()
+
+    def _on_disturb_up(self) -> None:
+        self.driver.apply_disturbance(DISTURB_UP_FORCE, DISTURB_DURATION)
+
+    def _on_disturb_down(self) -> None:
+        self.driver.apply_disturbance(DISTURB_DOWN_FORCE, DISTURB_DURATION)
 
     def _on_reset(self) -> None:
         self.driver.reset()
         self._trail_z.clear()
         self._trail_vz.clear()
+        self._ts_t.clear()
+        self._ts_z.clear()
+        self._ts_fz.clear()
         self.recompute_field()

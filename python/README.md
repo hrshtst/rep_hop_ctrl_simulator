@@ -48,9 +48,13 @@ rebuild.)
 uv run rhc-demo
 ```
 
-Drag **ρ** from 1 → 0 to morph from hopping to standing; change **z̃a** to retarget
-the apex live; press **Disturb ↑** to kick the COM during flight and watch the
-soft landing; **Reset** restarts.
+Drag **ρ** from 1 → 0 to morph from hopping to standing (the driver slews ρ at
+a bounded rate, so even a slider jump morphs continuously); change **z̃a** to
+retarget the apex live; press **Disturb ↑** (`U`) to kick the COM during flight
+or **Disturb ↓** (`D`) to push it down during stance — the paper's Simulation IV
+force pulses — and watch the soft landing; toggle the **Soft landing** checkbox
+to compare against the unadjusted landing impact on the scrolling z/fz strip
+chart, which holds the windowed peak GRF in its corner; **Reset** (`R`) restarts.
 
 ## Test and lint
 
