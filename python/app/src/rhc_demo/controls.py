@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -65,7 +66,9 @@ class ControlsPanel(QWidget):
     zhChanged = pyqtSignal(float)
     kChanged = pyqtSignal(float)
     massChanged = pyqtSignal(float)
-    disturbanceRequested = pyqtSignal()
+    softLandingChanged = pyqtSignal(bool)
+    disturbUpRequested = pyqtSignal()
+    disturbDownRequested = pyqtSignal()
     resetRequested = pyqtSignal()
 
     def __init__(self, params: Params) -> None:
@@ -97,12 +100,21 @@ class ControlsPanel(QWidget):
         mass.valueChanged.connect(self.massChanged)
         layout.addWidget(mass)
 
+        layout.addWidget(QLabel("<b>Landing</b>"))
+        soft_landing = QCheckBox("Soft landing")
+        soft_landing.setChecked(params.soft_landing)
+        soft_landing.toggled.connect(self.softLandingChanged)
+        layout.addWidget(soft_landing)
+
         buttons = QHBoxLayout()
-        disturb_btn = QPushButton("Disturb ↑")
-        disturb_btn.clicked.connect(lambda: self.disturbanceRequested.emit())
+        disturb_up_btn = QPushButton("Disturb ↑")
+        disturb_up_btn.clicked.connect(lambda: self.disturbUpRequested.emit())
+        disturb_down_btn = QPushButton("Disturb ↓")
+        disturb_down_btn.clicked.connect(lambda: self.disturbDownRequested.emit())
         reset_btn = QPushButton("Reset")
         reset_btn.clicked.connect(lambda: self.resetRequested.emit())
-        buttons.addWidget(disturb_btn)
+        buttons.addWidget(disturb_up_btn)
+        buttons.addWidget(disturb_down_btn)
         buttons.addWidget(reset_btn)
         layout.addLayout(buttons)
 
