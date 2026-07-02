@@ -14,6 +14,12 @@ import rhc
 
 DEFAULT_TYPE = rhc.DynmorphType.SOFT_LANDING_PIECEWISE
 
+# Maximum |drho/dt| applied to the controller. Switching the oscillator on
+# instantaneously from a settled stand can demand a peak thrust an order of
+# magnitude above the steady hopping force; slewing rho keeps the morph
+# continuous no matter how the slider is moved.
+RHO_SLEW_RATE = 2.0  # 1/s
+
 
 @dataclass(frozen=True)
 class Params:
@@ -26,6 +32,7 @@ class Params:
     rho: float = 1.0
     k: float = 4.0
     mass: float = 10.0
+    soft_landing: bool = True
     ctrl_type: rhc.DynmorphType = field(default=DEFAULT_TYPE)
 
 
@@ -39,10 +46,12 @@ class Snapshot:
     phase: rhc.Phase
     contact: bool
     fz: float
+    fz_peak: float
     n: int
     param_za: float
     param_zm: float
     param_zb: float
+    param_rho: float
 
 
 @dataclass
@@ -63,6 +72,10 @@ def make_system(params: Params) -> System:
     cmd.set(params.za, params.zh, params.zm, params.zb)
     ctrl.set_rho(params.rho)
     ctrl.set_k(params.k)
+    if params.soft_landing:
+        ctrl.enable_soft_landing()
+    else:
+        ctrl.disable_soft_landing()
     sim = rhc.Simulator(cmd, ctrl, model)
     return System(cmd, model, ctrl, sim)
 
@@ -73,7 +86,7 @@ class Driver:
     def __init__(
         self,
         params: Params | None = None,
-        dt: float = 0.001,
+        dt: float = 0.0001,
         z0: float = 0.255,
         vz0: float = 0.0,
     ) -> None:
@@ -89,6 +102,8 @@ class Driver:
         self.sys.sim.reset()
         self.sys.sim.set_state(rhc.Vec([self._z0, self._vz0]))
         self._disturb_remaining = 0.0
+        self._rho_applied = self.params.rho
+        self._fz_peak = 0.0
 
     def reset(self) -> None:
         """Rebuild the system and return to the initial state."""
@@ -97,17 +112,32 @@ class Driver:
     def step(self, n_substeps: int = 1) -> None:
         """Advance the simulation by ``n_substeps`` integration steps."""
         sim = self.sys.sim
+        ctrl = self.sys.ctrl
+        peak = 0.0
         for _ in range(n_substeps):
+            self._slew_rho()
             if self._disturb_remaining > 0.0:
                 self._disturb_remaining -= self.dt
                 if self._disturb_remaining <= 0.0:
                     sim.fe = 0.0
             sim.step(self.dt)
+            peak = max(peak, ctrl.fz)
+        self._fz_peak = peak
+
+    def _slew_rho(self) -> None:
+        """Move the applied rho toward the commanded one at a bounded rate."""
+        target = self.params.rho
+        if self._rho_applied == target:
+            return
+        limit = RHO_SLEW_RATE * self.dt
+        delta = min(max(target - self._rho_applied, -limit), limit)
+        self._rho_applied += delta
+        self.sys.ctrl.set_rho(self._rho_applied)
 
     # -- live parameter setters (mutate the running system in place) --
     def set_rho(self, value: float) -> None:
+        """Command a new rho; it is applied gradually by the slew limiter."""
         self.params = replace(self.params, rho=value)
-        self.sys.ctrl.set_rho(value)
 
     def set_k(self, value: float) -> None:
         self.params = replace(self.params, k=value)
@@ -133,6 +163,13 @@ class Driver:
         self.params = replace(self.params, mass=value)
         self.sys.model.mass = value
 
+    def set_soft_landing(self, *, enabled: bool) -> None:
+        self.params = replace(self.params, soft_landing=enabled)
+        if enabled:
+            self.sys.ctrl.enable_soft_landing()
+        else:
+            self.sys.ctrl.disable_soft_landing()
+
     def apply_disturbance(self, force: float, duration: float = 0.05) -> None:
         """Apply an external vertical force for a short window (e.g. in flight)."""
         self.sys.sim.fe = force
@@ -155,8 +192,10 @@ class Driver:
             phase=ctrl.phase,
             contact=ctrl.is_in_contact(),
             fz=ctrl.fz,
+            fz_peak=self._fz_peak,
             n=ctrl.n,
             param_za=ctrl.param_za,
             param_zm=ctrl.param_zm,
             param_zb=ctrl.param_zb,
+            param_rho=ctrl.param_rho,
         )
