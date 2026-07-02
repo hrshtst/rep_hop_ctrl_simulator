@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 import rhc
-from rhc_demo.driver import Driver, Params
+from rhc_demo.driver import RHO_SLEW_RATE, Driver, Params
 
 
 def test_steps_advance_time():
@@ -57,3 +59,30 @@ def test_disturbance_sets_then_clears_fe():
     assert d.sim_fe() == 50.0
     d.step(5)  # exceeds the 0.003 s window
     assert d.sim_fe() == 0.0
+
+
+def test_soft_landing_toggle_persists_across_reset():
+    d = Driver(Params(rho=1.0), dt=0.001)
+    assert d.sys.ctrl.soft_landing
+    d.set_soft_landing(enabled=False)
+    assert not d.sys.ctrl.soft_landing
+    d.reset()
+    assert not d.sys.ctrl.soft_landing
+
+
+def test_rho_is_slewed_not_stepped():
+    d = Driver(Params(rho=0.0), dt=0.001)
+    d.set_rho(1.0)
+    assert d.params.rho == 1.0
+    d.step(1)
+    assert d.sys.ctrl.rho == pytest.approx(RHO_SLEW_RATE * d.dt)
+    d.step(2 * int(1.0 / (RHO_SLEW_RATE * d.dt)))  # more than enough steps
+    assert d.sys.ctrl.rho == 1.0
+
+
+def test_snapshot_reports_substep_fz_peak():
+    d = Driver(Params(rho=1.0), dt=0.001, z0=0.24, vz0=0.0)
+    d.step(100)
+    snap = d.snapshot()
+    assert snap.fz_peak >= snap.fz >= 0.0
+    assert snap.fz_peak > 0.0
