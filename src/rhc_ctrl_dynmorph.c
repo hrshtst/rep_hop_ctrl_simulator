@@ -8,6 +8,7 @@ cmd_t *ctrl_dynmorph_cmd_init(ctrl_t *self, cmd_t *cmd)
   cmd_default_init( cmd );
   ctrl_dynmorph_set_rho( self, 0.0 );
   ctrl_dynmorph_set_k( self, 4.0 );
+  ctrl_dynmorph_set_q_scale( self, 1.0 );
   ctrl_dynmorph_enable_soft_landing( self );
   return cmd;
 }
@@ -68,15 +69,16 @@ void ctrl_dynmorph_destroy(ctrl_t *self)
 
 void ctrl_dynmorph_header(FILE *fp, void *util)
 {
-  fprintf( fp, ",type,rho,k,soft_landing,q1,q2,vm,p_za,p_zh,p_zm,p_zb,p_rho" );
+  fprintf( fp, ",type,rho,k,q_scale,soft_landing,q1,q2,vm,p_za,p_zh,p_zm,p_zb,p_rho" );
 }
 
 void ctrl_dynmorph_writer(FILE *fp, ctrl_t *self, void *util)
 {
-  fprintf( fp, ",%d,%f,%f,%d,%f,%f,%f,%f,%f,%f,%f,%f",
+  fprintf( fp, ",%d,%f,%f,%f,%d,%f,%f,%f,%f,%f,%f,%f,%f",
            ctrl_dynmorph_type(self),
            ctrl_dynmorph_rho(self),
            ctrl_dynmorph_k(self),
+           ctrl_dynmorph_q_scale(self),
            ctrl_dynmorph_soft_landing(self),
            ctrl_dynmorph_q1(self),
            ctrl_dynmorph_q2(self),
@@ -292,8 +294,8 @@ ctrl_t *ctrl_dynmorph_update(ctrl_t *self, double t, vec_t p)
 
 double ctrl_dynmorph_calc_fz(ctrl_t *self, vec_t p)
 {
-  double zh, zm, zb, rho, k;
-  double g, k1, q1, gamma, f_gamma, unit_fz;
+  double zh, zm, zb, rho, k, q_scale;
+  double g, k1, q1, r, vm, gamma, f_gamma, unit_fz;
   ctrl_dynmorph_prp *prp;
 
   prp = ctrl_dynmorph_get_prp(self);
@@ -302,12 +304,15 @@ double ctrl_dynmorph_calc_fz(ctrl_t *self, vec_t p)
   zb = ctrl_dynmorph_params_zb( self );
   rho = ctrl_dynmorph_params_rho( self );
   k = ctrl_dynmorph_k( self );
+  q_scale = ctrl_dynmorph_q_scale( self );
   g = model_gravity( ctrl_model(self) );
-  k1 = g / ( zh - zm );
-  q1 = ctrl_dynmorph_calc_q1( zh, zm, g );
+  q1 = ctrl_dynmorph_calc_q1( zh, zm, g ) * q_scale;
+  k1 = q1 * q1;
   prp->q1 = prp->q2 = q1;
-  prp->vm = ctrl_dynmorph_calc_vm( zh, zm, zb, g );
-  gamma = ctrl_dynmorph_calc_gamma( p, zh, zm, zb, g );
+  r = ctrl_dynmorph_calc_r( zm, zb );
+  vm = q1 * r;
+  prp->vm = vm;
+  gamma = sqrt( sqr( vec_elem(p,0) - zm ) / sqr( r ) + sqr( vec_elem(p,1) ) / sqr( vm ) );
   f_gamma = 1.0 - rho * exp( k * ( 1.0 - gamma ) );
   unit_fz = -2.0 * q1 * f_gamma * vec_elem(p,1) - k1 * ( vec_elem(p,0) - zm ) + g;
   return model_mass( ctrl_model( self ) ) * unit_fz;

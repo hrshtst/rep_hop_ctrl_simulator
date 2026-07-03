@@ -62,6 +62,7 @@ void cmd_f_write_dynmorph(FILE* fp, cmd_t *self)
   cmd_f_write( fp, self );
   fprintf( fp, "rho = %f\n", self->dynmorph.rho );
   fprintf( fp, "k = %f\n", self->dynmorph.k );
+  fprintf( fp, "q_scale = %f\n", self->dynmorph.q_scale );
   fprintf( fp, "soft_landing = %s\n", self->dynmorph.soft_landing ? "true" : "false" );
 }
 
