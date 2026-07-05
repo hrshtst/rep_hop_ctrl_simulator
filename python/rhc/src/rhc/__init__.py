@@ -1,47 +1,24 @@
 """Python bindings for the rep_hop_ctrl_simulator C library.
 
-The compiled extension :mod:`rhc._rhc` exposes the library types; this package
-re-exports them under the friendly ``rhc`` namespace.
+The compiled extension :mod:`rhc._rhc` exposes a single high-level facade,
+:class:`DynmorphSim`, that owns the whole coupled C system (command, model,
+dynamics-morphing controller and integrator). Stepping is batched and runs
+with the GIL released; per-substep samples are returned as NumPy arrays
+that own their buffers without copying.
 """
 
 from __future__ import annotations
 
 from rhc._rhc import (
-    Cmd,
-    Complex,
-    Ctrl,
-    DynmorphCtrl,
+    DynmorphSim,
     DynmorphType,
-    Event,
-    Logger,
-    Model,
-    Ode,
     Phase,
-    PhasePortraitPlotter,
-    RaibertCtrl,
-    RaibertType,
-    RegulatorCtrl,
-    Simulator,
-    Vec,
     __version__,
 )
 
 __all__ = [
-    "Cmd",
-    "Complex",
-    "Ctrl",
-    "DynmorphCtrl",
+    "DynmorphSim",
     "DynmorphType",
-    "Event",
-    "Logger",
-    "Model",
-    "Ode",
     "Phase",
-    "PhasePortraitPlotter",
-    "RaibertCtrl",
-    "RaibertType",
-    "RegulatorCtrl",
-    "Simulator",
-    "Vec",
     "__version__",
 ]
