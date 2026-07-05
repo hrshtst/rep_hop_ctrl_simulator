@@ -9,13 +9,11 @@ import pytest
 from rhc_demo.curves import (
     N_VZ,
     N_Z,
-    VZ_SEED_RANGE,
-    Z_SEED_RANGE,
     CurveWorker,
     compute_curves,
     default_seeds,
 )
-from rhc_demo.params import Params, with_param
+from rhc_demo.params import PHASE_VZ_RANGE, PHASE_Z_RANGE, Params, with_param
 
 N_EDGE = 2 * (N_Z + N_VZ)  # seeds on the region perimeter
 
@@ -24,16 +22,16 @@ def test_seeds_lie_on_region_edges_when_standing():
     seeds = default_seeds(Params())  # rho = 0: edge points only
     assert len(seeds) == N_EDGE
     for z, vz in seeds:
-        on_horizontal = vz in VZ_SEED_RANGE and Z_SEED_RANGE[0] <= z <= Z_SEED_RANGE[1]
-        on_vertical = z in Z_SEED_RANGE and VZ_SEED_RANGE[0] <= vz <= VZ_SEED_RANGE[1]
+        on_horizontal = vz in PHASE_VZ_RANGE and PHASE_Z_RANGE[0] <= z <= PHASE_Z_RANGE[1]
+        on_vertical = z in PHASE_Z_RANGE and PHASE_VZ_RANGE[0] <= vz <= PHASE_VZ_RANGE[1]
         assert on_horizontal or on_vertical, f"seed ({z}, {vz}) not on an edge"
 
 
 def test_each_corner_appears_exactly_once():
     seeds = default_seeds(Params())
     assert len(set(seeds)) == len(seeds)
-    for corner_z in Z_SEED_RANGE:
-        for corner_vz in VZ_SEED_RANGE:
+    for corner_z in PHASE_Z_RANGE:
+        for corner_vz in PHASE_VZ_RANGE:
             assert seeds.count((corner_z, corner_vz)) == 1
 
 

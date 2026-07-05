@@ -18,6 +18,12 @@ ZM_RANGE = (0.20, 0.30)
 ZB_RANGE = (0.18, 0.30)
 K_RANGE = (0.5, 16.0)
 
+# Phase-portrait view region, shared by the phase view (its world window)
+# and the solution-curve seeding (seeds are distributed on its edges, like
+# the C plotter's pmin/pmax region) so the two always coincide.
+PHASE_Z_RANGE = (0.16, 0.40)
+PHASE_VZ_RANGE = (-2.0, 2.0)
+
 SIM_DT = 1e-4  # the paper's integration step
 RECORD_EVERY = 10  # sample the state at 1 kHz for history/export
 

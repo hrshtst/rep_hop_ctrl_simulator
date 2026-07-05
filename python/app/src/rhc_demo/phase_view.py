@@ -25,6 +25,8 @@ from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QPolygonF, QTransform
 from PyQt6.QtWidgets import QWidget
 
+from rhc_demo.params import PHASE_VZ_RANGE, PHASE_Z_RANGE
+
 if TYPE_CHECKING:
     import numpy as np
 
@@ -39,10 +41,6 @@ HISTORY_COLOR = QColor("#e08080")
 LABEL_COLOR = QColor("#606060")
 SEED_COLOR = QColor("#000000")  # debug markers for curve seeds
 SEED_RADIUS = 3.0
-
-# World window of the plot, in metres and metres/second.
-Z_WINDOW = (0.16, 0.40)
-VZ_WINDOW = (-2.0, 2.0)
 
 MARGIN = 14.0
 MIN_POLYLINE = 2  # points needed to draw a line
@@ -119,9 +117,9 @@ class PhaseView(QWidget):
     # -- painting -----------------------------------------------------------------
     def _world_transform(self) -> QTransform:
         w, h = float(self.width()), float(self.height())
-        sx = (w - 2 * MARGIN) / (Z_WINDOW[1] - Z_WINDOW[0])
-        sy = -(h - 2 * MARGIN) / (VZ_WINDOW[1] - VZ_WINDOW[0])
-        return QTransform(sx, 0.0, 0.0, sy, MARGIN - Z_WINDOW[0] * sx, MARGIN - VZ_WINDOW[1] * sy)
+        sx = (w - 2 * MARGIN) / (PHASE_Z_RANGE[1] - PHASE_Z_RANGE[0])
+        sy = -(h - 2 * MARGIN) / (PHASE_VZ_RANGE[1] - PHASE_VZ_RANGE[0])
+        return QTransform(sx, 0.0, 0.0, sy, MARGIN - PHASE_Z_RANGE[0] * sx, MARGIN - PHASE_VZ_RANGE[1] * sy)
 
     def paintEvent(self, event) -> None:
         del event
@@ -144,17 +142,17 @@ class PhaseView(QWidget):
 
         # Solid black axes: vz = 0 and z = zh.
         painter.setPen(_cosmetic_pen(AXIS_COLOR, 1.0))
-        painter.drawLine(QPointF(Z_WINDOW[0], 0.0), QPointF(Z_WINDOW[1], 0.0))
+        painter.drawLine(QPointF(PHASE_Z_RANGE[0], 0.0), QPointF(PHASE_Z_RANGE[1], 0.0))
         snap = self._snap
         if snap is not None and not math.isnan(snap.zh):
-            painter.drawLine(QPointF(snap.zh, VZ_WINDOW[0]), QPointF(snap.zh, VZ_WINDOW[1]))
+            painter.drawLine(QPointF(snap.zh, PHASE_VZ_RANGE[0]), QPointF(snap.zh, PHASE_VZ_RANGE[1]))
 
         # Dotted boundaries: target apex za and kinematic lower limit zb.
         if snap is not None:
             painter.setPen(_cosmetic_pen(BOUNDARY_COLOR, 1.0, Qt.PenStyle.DotLine))
             for value in (snap.za, snap.zb):
                 if not math.isnan(value):
-                    painter.drawLine(QPointF(value, VZ_WINDOW[0]), QPointF(value, VZ_WINDOW[1]))
+                    painter.drawLine(QPointF(value, PHASE_VZ_RANGE[0]), QPointF(value, PHASE_VZ_RANGE[1]))
 
         # Continuous history line (unless the trail mode is active).
         if not self._trail_mode and self._history.size() >= MIN_POLYLINE:
@@ -168,7 +166,7 @@ class PhaseView(QWidget):
         if snap is not None:
             for value, label, dy in ((snap.zh, "z_h", 12.0), (snap.za, "z̃_a", 24.0), (snap.zb, "z̃_b", 24.0)):
                 if not math.isnan(value):
-                    top = tr.map(QPointF(value, VZ_WINDOW[1]))
+                    top = tr.map(QPointF(value, PHASE_VZ_RANGE[1]))
                     painter.drawText(QPointF(top.x() + 3.0, top.y() + dy), label)
         painter.drawText(QPointF(6.0, float(self.height()) - 6.0), "z →   (phase portrait: z vs ż)")
 

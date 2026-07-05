@@ -22,16 +22,16 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 import rhc
+from rhc_demo.params import PHASE_VZ_RANGE, PHASE_Z_RANGE
 
 if TYPE_CHECKING:
     from rhc_demo.params import Params
 
 # Seeds per edge of the phase-portrait view region (the C plotter's
-# default n_sc is 10 per axis).
+# default n_sc is 10 per axis). The region itself is PHASE_Z_RANGE x
+# PHASE_VZ_RANGE, i.e. exactly the view box drawn by the phase view.
 N_Z = 10  # along each horizontal edge (stepping z)
 N_VZ = 10  # along each vertical edge (stepping vz)
-Z_SEED_RANGE = (0.18, 0.38)
-VZ_SEED_RANGE = (-1.6, 1.6)
 EPSILON = 1e-6
 
 CURVE_DURATION = 0.8  # s of rollout per seed
@@ -49,8 +49,8 @@ def _edge_seeds() -> list[Seed]:
     from one corner and stops short of the next, so every corner appears
     exactly once.
     """
-    z0, z1 = Z_SEED_RANGE
-    v0, v1 = VZ_SEED_RANGE
+    z0, z1 = PHASE_Z_RANGE
+    v0, v1 = PHASE_VZ_RANGE
     dz = (z1 - z0) / N_Z
     dv = (v1 - v0) / N_VZ
     seeds: list[Seed] = []
