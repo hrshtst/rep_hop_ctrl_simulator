@@ -62,6 +62,8 @@ class MainWindow(QMainWindow):
         self._curve_debounce.timeout.connect(self._request_curves)
 
         self._connect_panel()
+        # The panel's checkbox state is authoritative for the history mode.
+        self.phase_view.set_trail_mode(self.panel.trail_mode_enabled())
         if self.interactive:
             self.robot_view.feChanged.connect(self.source.set_fe)
 

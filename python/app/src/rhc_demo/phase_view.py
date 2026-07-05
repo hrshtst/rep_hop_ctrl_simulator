@@ -68,7 +68,9 @@ class PhaseView(QWidget):
         self._decim_phase = 0
         self._trail: deque[QPointF] = deque(maxlen=TRAIL_LEN)
         self._snap: Snapshot | None = None
-        self._trail_mode = False
+        # Default to the fading trail: the continuous full-history line is
+        # easily mistaken for a solution curve. The panel toggle switches.
+        self._trail_mode = True
 
     # -- data input -----------------------------------------------------------
     def set_curves(

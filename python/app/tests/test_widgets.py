@@ -129,3 +129,16 @@ def test_phase_view_seed_overlay(qapp):
     view.set_show_seeds(False)
     without_seeds = view.grab().toImage()
     assert with_seeds != without_seeds
+
+
+def test_fading_trail_is_the_default(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+    from rhc_demo.phase_view import PhaseView
+
+    assert PhaseView()._trail_mode is True
+    assert ControlPanel(Params()).trail_mode_enabled() is True
+
+
+def test_window_syncs_trail_mode_from_panel(replay_window):
+    assert replay_window.phase_view._trail_mode is replay_window.panel.trail_mode_enabled()

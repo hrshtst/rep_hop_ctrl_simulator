@@ -154,6 +154,9 @@ class ControlPanel(QWidget):
         self._soft_landing.toggled.connect(self.softLandingChanged.emit)
         box.addWidget(self._soft_landing)
         self._trail_mode = QCheckBox("Fading COM trail (vs full history)")
+        # Checked by default: the full-history line is ambiguous next to
+        # the gray solution curves.
+        self._trail_mode.setChecked(True)
         self._trail_mode.toggled.connect(self.trailModeChanged.emit)
         box.addWidget(self._trail_mode)
         group.setLayout(box)
@@ -184,6 +187,9 @@ class ControlPanel(QWidget):
         self._pause_btn.setText("Resume" if paused else "Pause")
         self._step_btn.setEnabled(paused)
         self.pauseToggled.emit(paused)
+
+    def trail_mode_enabled(self) -> bool:
+        return self._trail_mode.isChecked()
 
     # -- updates from the frame loop --------------------------------------------
     def set_parameters_enabled(self, enabled: bool) -> None:
