@@ -1,10 +1,16 @@
 """Background computation of phase-portrait solution curves.
 
-Reproduces the paper's phase-portrait curve family (see
-``graph/make_phase_portraits.sh`` and its concise variant) with a
-deliberately reduced seed count so recomputation keeps up with live
-slider changes. The rollouts run in the bindings with the GIL released,
-on a dedicated worker thread with latest-wins semantics; the UI polls
+Reproduces the paper's phase-portrait curve family: initial seeds are
+distributed along the edges of the view region — mirroring
+``ppp_generate_edge_points()`` in ``src/rhc_phase_portrait_plotter.c``
+and its use in ``graph/prog/phase_portrait.c`` — because solution curves
+flow inward and cannot cross, so boundary seeds sweep the whole region
+without redundant interior curves. When the controller oscillates, a
+pair of seeds straddling the orbit center is added to reveal the limit
+cycle from inside and outside.
+
+The rollouts run in the bindings with the GIL released, on a dedicated
+worker thread with latest-wins semantics; the UI polls
 :meth:`take_result` from its frame timer.
 """
 
@@ -20,9 +26,10 @@ import rhc
 if TYPE_CHECKING:
     from rhc_demo.params import Params
 
-# Seed grid over the phase-portrait view region (kept small on purpose).
-N_Z = 7
-N_VZ = 5
+# Seeds per edge of the phase-portrait view region (the C plotter's
+# default n_sc is 10 per axis).
+N_Z = 10  # along each horizontal edge (stepping z)
+N_VZ = 10  # along each vertical edge (stepping vz)
 Z_SEED_RANGE = (0.18, 0.38)
 VZ_SEED_RANGE = (-1.6, 1.6)
 EPSILON = 1e-6
@@ -35,14 +42,44 @@ Seed = tuple[float, float]
 Curve = tuple[np.ndarray, np.ndarray]
 
 
+def _edge_seeds() -> list[Seed]:
+    """Return seeds walking the perimeter of the view region.
+
+    Same point set as ``ppp_generate_edge_points()``: each edge is stepped
+    from one corner and stops short of the next, so every corner appears
+    exactly once.
+    """
+    z0, z1 = Z_SEED_RANGE
+    v0, v1 = VZ_SEED_RANGE
+    dz = (z1 - z0) / N_Z
+    dv = (v1 - v0) / N_VZ
+    seeds: list[Seed] = []
+    seeds += [(z0 + j * dz, v0) for j in range(N_Z)]  # bottom, left -> right
+    seeds += [(z1, v0 + j * dv) for j in range(N_VZ)]  # right, bottom -> top
+    seeds += [(z1 - j * dz, v1) for j in range(N_Z)]  # top, right -> left
+    seeds += [(z0, v1 - j * dv) for j in range(N_VZ)]  # left, top -> bottom
+    return seeds
+
+
+def _orbit_center(params: Params) -> float:
+    """Return the stance-orbit center the straddle seeds should bracket.
+
+    Mirrors graph/prog/phase_portrait.c: the squat center (za + zb)/2 when
+    the target apex is below the lift-off height, the standing height zm
+    otherwise.
+    """
+    if params.za < params.zh:
+        return 0.5 * (params.za + params.zb)
+    return params.zm
+
+
 def default_seeds(params: Params) -> list[Seed]:
-    """Return a coarse seed grid, plus equilibrium-straddling points when hopping."""
-    zs = np.linspace(*Z_SEED_RANGE, N_Z)
-    vzs = np.linspace(*VZ_SEED_RANGE, N_VZ)
-    seeds = [(float(z), float(vz)) for z in zs for vz in vzs]
+    """Return edge seeds, plus orbit-straddling points when oscillating."""
+    seeds = _edge_seeds()
     if params.rho > 0.0:
-        seeds.append((params.zm - EPSILON, 0.0))
-        seeds.append((params.zm + EPSILON, 0.0))
+        center = _orbit_center(params)
+        seeds.append((center - EPSILON, 0.0))
+        seeds.append((center + EPSILON, 0.0))
     return seeds
 
 

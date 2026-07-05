@@ -6,24 +6,52 @@ import time
 
 import pytest
 
-from rhc_demo.curves import N_VZ, N_Z, CurveWorker, compute_curves, default_seeds
-from rhc_demo.params import Params
+from rhc_demo.curves import (
+    N_VZ,
+    N_Z,
+    VZ_SEED_RANGE,
+    Z_SEED_RANGE,
+    CurveWorker,
+    compute_curves,
+    default_seeds,
+)
+from rhc_demo.params import Params, with_param
 
-GRID = N_Z * N_VZ
+N_EDGE = 2 * (N_Z + N_VZ)  # seeds on the region perimeter
 
 
-def test_default_seed_grid_when_standing():
-    seeds = default_seeds(Params())  # rho = 0
-    assert len(seeds) == GRID  # plain grid, no straddle points
+def test_seeds_lie_on_region_edges_when_standing():
+    seeds = default_seeds(Params())  # rho = 0: edge points only
+    assert len(seeds) == N_EDGE
+    for z, vz in seeds:
+        on_horizontal = vz in VZ_SEED_RANGE and Z_SEED_RANGE[0] <= z <= Z_SEED_RANGE[1]
+        on_vertical = z in Z_SEED_RANGE and VZ_SEED_RANGE[0] <= vz <= VZ_SEED_RANGE[1]
+        assert on_horizontal or on_vertical, f"seed ({z}, {vz}) not on an edge"
 
 
-def test_straddle_points_added_when_hopping():
-    p = Params(rho=1.0)
+def test_each_corner_appears_exactly_once():
+    seeds = default_seeds(Params())
+    assert len(set(seeds)) == len(seeds)
+    for corner_z in Z_SEED_RANGE:
+        for corner_vz in VZ_SEED_RANGE:
+            assert seeds.count((corner_z, corner_vz)) == 1
+
+
+def test_straddle_points_bracket_zm_when_hopping():
+    p = Params(rho=1.0)  # za > zh: hop
     seeds = default_seeds(p)
-    assert len(seeds) == GRID + 2
+    assert len(seeds) == N_EDGE + 2
     (z1, v1), (z2, v2) = seeds[-2:]
     assert v1 == v2 == 0.0
     assert z1 < p.zm < z2
+
+
+def test_straddle_points_bracket_squat_center():
+    p = with_param(Params(rho=1.0), "za", 0.25)  # za < zh: squat
+    seeds = default_seeds(p)
+    center = 0.5 * (p.za + p.zb)
+    (z1, _), (z2, _) = seeds[-2:]
+    assert z1 < center < z2
 
 
 def test_compute_curves_pairs_each_seed_with_its_curve():
@@ -45,7 +73,7 @@ def test_worker_returns_result_once():
             time.sleep(0.01)
         assert result is not None
         seeds, curves = result
-        assert len(seeds) == len(curves) == GRID
+        assert len(seeds) == len(curves) == N_EDGE
         assert worker.take_result() is None
     finally:
         worker.close()
