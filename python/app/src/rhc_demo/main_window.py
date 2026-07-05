@@ -35,7 +35,7 @@ CURVE_PARAM_TOL = 1e-4
 class MainWindow(QMainWindow):
     """Three-panel demo window driven by a live engine or a replay source."""
 
-    def __init__(self, source: LiveEngine | ReplaySource) -> None:
+    def __init__(self, source: LiveEngine | ReplaySource, *, show_seeds: bool = False) -> None:
         super().__init__()
         self.source = source
         self.interactive = isinstance(source, LiveEngine)
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"Dynamics Morphing — standing ↔ hopping ({title_mode})")
 
         params = source.params if self.interactive else Params()
-        self.phase_view = PhaseView()
+        self.phase_view = PhaseView(show_seeds=show_seeds)
         self.robot_view = RobotView(interactive=self.interactive)
         self.panel = ControlPanel(params, interactive=self.interactive)
         root = QHBoxLayout()
@@ -100,9 +100,10 @@ class MainWindow(QMainWindow):
         if not self.interactive:
             self.panel.reflect_snapshot(snap)
             self._maybe_refresh_replay_curves(snap)
-        curves = self._curve_worker.take_result()
-        if curves is not None:
-            self.phase_view.set_curves(curves)
+        result = self._curve_worker.take_result()
+        if result is not None:
+            seeds, curves = result
+            self.phase_view.set_curves(curves, seeds)
         return snap
 
     # -- solution curves ---------------------------------------------------------

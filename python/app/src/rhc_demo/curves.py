@@ -31,10 +31,11 @@ CURVE_DURATION = 0.8  # s of rollout per seed
 CURVE_DT = 4e-4
 CURVE_STRIDE = 4
 
+Seed = tuple[float, float]
 Curve = tuple[np.ndarray, np.ndarray]
 
 
-def default_seeds(params: Params) -> list[tuple[float, float]]:
+def default_seeds(params: Params) -> list[Seed]:
     """Return a coarse seed grid, plus equilibrium-straddling points when hopping."""
     zs = np.linspace(*Z_SEED_RANGE, N_Z)
     vzs = np.linspace(*VZ_SEED_RANGE, N_VZ)
@@ -45,8 +46,12 @@ def default_seeds(params: Params) -> list[tuple[float, float]]:
     return seeds
 
 
-def compute_curves(params: Params) -> list[Curve]:
-    """Roll out the seed family with the given parameters (blocking)."""
+def compute_curves(params: Params) -> tuple[list[Seed], list[Curve]]:
+    """Roll out the seed family with the given parameters (blocking).
+
+    Returns the seeds together with their curves so consumers (e.g. the
+    phase view's debug seed markers) always show the pair atomically.
+    """
     sim = rhc.DynmorphSim(mass=params.mass)
     sim.za = params.za
     sim.zh = params.zh
@@ -55,7 +60,8 @@ def compute_curves(params: Params) -> list[Curve]:
     sim.rho = params.rho
     sim.k = params.k
     sim.soft_landing = params.soft_landing
-    return sim.solution_curves(default_seeds(params), CURVE_DURATION, CURVE_DT, CURVE_STRIDE)
+    seeds = default_seeds(params)
+    return seeds, sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE)
 
 
 class CurveWorker:
@@ -64,7 +70,7 @@ class CurveWorker:
     def __init__(self) -> None:
         self._cond = threading.Condition()
         self._pending: Params | None = None
-        self._result: list[Curve] | None = None
+        self._result: tuple[list[Seed], list[Curve]] | None = None
         self._running = True
         self._thread = threading.Thread(target=self._loop, name="curves", daemon=True)
         self._thread.start()
@@ -75,8 +81,8 @@ class CurveWorker:
             self._pending = params
             self._cond.notify()
 
-    def take_result(self) -> list[Curve] | None:
-        """Return freshly computed curves once, or None if not ready."""
+    def take_result(self) -> tuple[list[Seed], list[Curve]] | None:
+        """Return freshly computed (seeds, curves) once, or None if not ready."""
         with self._cond:
             result = self._result
             self._result = None
@@ -97,6 +103,6 @@ class CurveWorker:
                     return
                 params = self._pending
                 self._pending = None
-            curves = compute_curves(params)
+            result = compute_curves(params)
             with self._cond:
-                self._result = curves
+                self._result = result

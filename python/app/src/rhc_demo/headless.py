@@ -34,6 +34,8 @@ def render_frames(
     size: tuple[int, int] = DEFAULT_SIZE,
     speed: float = 1.0,
     progress: Callable[[int, int], None] | None = None,
+    *,
+    show_seeds: bool = False,
 ) -> list[Path]:
     """Render the whole replay to PNG frames; returns the frame paths.
 
@@ -45,7 +47,7 @@ def render_frames(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    window = MainWindow(source)
+    window = MainWindow(source, show_seeds=show_seeds)
     window._timer.stop()  # noqa: SLF001 — headless drives frames explicitly
     window.resize(*size)
     source.set_paused(True)

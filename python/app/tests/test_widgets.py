@@ -112,3 +112,20 @@ def test_robot_view_drag_emits_vertical_force(qapp):
     view.mouseReleaseEvent(ev(QMouseEvent.Type.MouseButtonRelease, QPointF(150, 250)))
     assert forces[0] == pytest.approx(50 * 3.0)  # 50 px up * 3 N/px
     assert forces[-1] == 0.0
+
+
+def test_phase_view_seed_overlay(qapp):
+    import numpy as np
+
+    from rhc_demo.phase_view import PhaseView
+    from rhc_demo.state import Snapshot
+
+    view = PhaseView(show_seeds=True)
+    view.resize(400, 400)
+    view.set_snapshot(Snapshot(z=0.26, vz=0.0, zh=0.26, za=0.28, zb=0.23))
+    curves = [(np.linspace(0.20, 0.30, 50), np.linspace(-1.0, 1.0, 50))]
+    view.set_curves(curves, seeds=[(0.20, -1.0), (0.30, 1.0)])
+    with_seeds = view.grab().toImage()
+    view.set_show_seeds(False)
+    without_seeds = view.grab().toImage()
+    assert with_seeds != without_seeds

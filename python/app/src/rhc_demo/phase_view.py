@@ -6,6 +6,10 @@ apex (za) and the kinematic lower limit (zb); the current COM state as a
 solid red circle; and a COM history that can be toggled between a
 continuous line and a fading trail of recent states.
 
+For debugging the curve family, the initial seeds of the solution
+curves can be overlaid as black circles (``show_seeds``; enabled with
+the ``--show-seeds`` command-line option).
+
 Geometry is kept in world coordinates (QPolygonF) and mapped with a
 QTransform at paint time, so the history polyline is append-only — no
 per-frame rebuilds no matter how long the session runs.
@@ -33,6 +37,8 @@ BOUNDARY_COLOR = QColor("#404040")
 COM_COLOR = QColor("#d62728")
 HISTORY_COLOR = QColor("#e08080")
 LABEL_COLOR = QColor("#606060")
+SEED_COLOR = QColor("#000000")  # debug markers for curve seeds
+SEED_RADIUS = 3.0
 
 # World window of the plot, in metres and metres/second.
 Z_WINDOW = (0.16, 0.40)
@@ -54,10 +60,12 @@ def _cosmetic_pen(color: QColor, width: float, style: Qt.PenStyle = Qt.PenStyle.
 class PhaseView(QWidget):
     """Phase portrait of the vertical COM dynamics."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, show_seeds: bool = False) -> None:
         super().__init__()
         self.setMinimumSize(320, 320)
         self._curve_polys: list[QPolygonF] = []
+        self._seed_pts: list[QPointF] = []
+        self._show_seeds = show_seeds
         self._history = QPolygonF()
         self._decim_phase = 0
         self._trail: deque[QPointF] = deque(maxlen=TRAIL_LEN)
@@ -65,12 +73,22 @@ class PhaseView(QWidget):
         self._trail_mode = False
 
     # -- data input -----------------------------------------------------------
-    def set_curves(self, curves: list[tuple[np.ndarray, np.ndarray]]) -> None:
+    def set_curves(
+        self,
+        curves: list[tuple[np.ndarray, np.ndarray]],
+        seeds: list[tuple[float, float]] | None = None,
+    ) -> None:
         self._curve_polys = [
             QPolygonF([QPointF(float(z[j]), float(vz[j])) for j in range(len(z))])
             for z, vz in curves
             if len(z) >= MIN_POLYLINE
         ]
+        self._seed_pts = [QPointF(z0, vz0) for z0, vz0 in seeds] if seeds else []
+        self.update()
+
+    def set_show_seeds(self, on: bool) -> None:
+        """Toggle the debug overlay of curve seeds as black circles."""
+        self._show_seeds = on
         self.update()
 
     def push_samples(self, chunks: list[tuple[np.ndarray, np.ndarray]]) -> None:
@@ -153,6 +171,13 @@ class PhaseView(QWidget):
                     top = tr.map(QPointF(value, VZ_WINDOW[1]))
                     painter.drawText(QPointF(top.x() + 3.0, top.y() + dy), label)
         painter.drawText(QPointF(6.0, float(self.height()) - 6.0), "z →   (phase portrait: z vs ż)")
+
+        # Debug overlay: initial seeds of the solution curves.
+        if self._show_seeds and self._seed_pts:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(SEED_COLOR))
+            for seed in self._seed_pts:
+                painter.drawEllipse(tr.map(seed), SEED_RADIUS, SEED_RADIUS)
 
         # Fading discrete trail of recent states.
         if self._trail_mode and self._trail:

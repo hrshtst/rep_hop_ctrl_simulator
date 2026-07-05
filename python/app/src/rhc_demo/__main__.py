@@ -32,7 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rhc-demo", description="Dynamics-morphing standing/hopping demo.")
     sub = parser.add_subparsers(dest="mode")
 
-    sub.add_parser("interactive", help="live simulation window (default)")
+    interactive = sub.add_parser("interactive", help="live simulation window (default)")
 
     replay = sub.add_parser("replay", help="replay a recorded time-series CSV")
     replay.add_argument("csv", type=Path, help="logger-schema CSV file")
@@ -46,6 +46,13 @@ def _build_parser() -> argparse.ArgumentParser:
     headless.add_argument("--size", default="1280x720", help="frame size WxH")
     headless.add_argument("--mp4", action="store_true", help="also encode an MP4")
     headless.add_argument("--gif", action="store_true", help="also encode a GIF")
+
+    for mode in (interactive, replay, headless):
+        mode.add_argument(
+            "--show-seeds",
+            action="store_true",
+            help="debug: mark the solution-curve initial seeds as black circles in the phase portrait",
+        )
     return parser
 
 
@@ -59,22 +66,22 @@ def _run_gui(window_factory) -> int:
     return app.exec()
 
 
-def _main_interactive() -> int:
+def _main_interactive(*, show_seeds: bool = False) -> int:
     def factory() -> MainWindow:
         from rhc_demo.engine import LiveEngine
         from rhc_demo.main_window import MainWindow
 
-        return MainWindow(LiveEngine())
+        return MainWindow(LiveEngine(), show_seeds=show_seeds)
 
     return _run_gui(factory)
 
 
-def _main_replay(csv: Path, speed: float) -> int:
+def _main_replay(csv: Path, speed: float, *, show_seeds: bool = False) -> int:
     def factory() -> MainWindow:
         from rhc_demo.main_window import MainWindow
         from rhc_demo.replay import load_replay
 
-        return MainWindow(load_replay(csv, speed=speed))
+        return MainWindow(load_replay(csv, speed=speed), show_seeds=show_seeds)
 
     return _run_gui(factory)
 
@@ -102,7 +109,15 @@ def _main_headless(args: argparse.Namespace) -> int:
         if done % 25 == 0 or done == total:
             print(f"\rrendering frames: {done}/{total}", end="", flush=True)
 
-    frames = render_frames(source, frame_dir, fps=args.fps, size=(width, height), speed=args.speed, progress=progress)
+    frames = render_frames(
+        source,
+        frame_dir,
+        fps=args.fps,
+        size=(width, height),
+        speed=args.speed,
+        progress=progress,
+        show_seeds=args.show_seeds,
+    )
     print(f"\n{len(frames)} frames -> {frame_dir}")
 
     if args.mp4:
@@ -117,10 +132,11 @@ def _main_headless(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.mode == "replay":
-        return _main_replay(args.csv, args.speed)
+        return _main_replay(args.csv, args.speed, show_seeds=args.show_seeds)
     if args.mode == "headless":
         return _main_headless(args)
-    return _main_interactive()
+    # Bare invocation has no subcommand namespace, hence the getattr default.
+    return _main_interactive(show_seeds=getattr(args, "show_seeds", False))
 
 
 if __name__ == "__main__":
