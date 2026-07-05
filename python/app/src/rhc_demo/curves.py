@@ -7,7 +7,11 @@ and its use in ``graph/prog/phase_portrait.c`` — because solution curves
 flow inward and cannot cross, so boundary seeds sweep the whole region
 without redundant interior curves. When the controller oscillates, a
 pair of seeds straddling the orbit center is added to reveal the limit
-cycle from inside and outside.
+cycle from inside and outside. When the soft-landing strategy is
+enabled, three seeds are pruned exactly as in the paper's figures (the
+"remove points for soft landing" block of phase_portrait.c): their
+trajectories collapse onto the same adjusted landing path as their
+neighbours and would only overdraw the plot.
 
 The rollouts run in the bindings with the GIL released, on a dedicated
 worker thread with latest-wins semantics; the UI polls
@@ -16,6 +20,7 @@ worker thread with latest-wins semantics; the UI polls
 
 from __future__ import annotations
 
+import math
 import threading
 from typing import TYPE_CHECKING
 
@@ -65,6 +70,30 @@ def _edge_seeds() -> list[Seed]:
     return seeds
 
 
+def _soft_landing_removals(params: Params) -> set[Seed]:
+    """Return the seeds pruned when the soft-landing strategy is enabled.
+
+    Mirrors the "remove points for soft landing" block in
+    graph/prog/phase_portrait.c. The C code hardcodes three points for
+    the paper's region; in grid terms they are the bottom-edge seed
+    nearest the lift-off height zh, its left neighbour, and the
+    right-edge seed one step below vz = 0, which is how they generalize
+    to any region. Points that fall outside the generated seed set are
+    ignored, like ppp_remove_p0()'s not-found case.
+    """
+    z0, z1 = PHASE_Z_RANGE
+    v0, v1 = PHASE_VZ_RANGE
+    dz = (z1 - z0) / N_Z
+    dv = (v1 - v0) / N_VZ
+    i_zh = round((params.zh - z0) / dz)
+    j_below_zero = math.ceil(-v0 / dv) - 1  # largest grid value < 0
+    return {
+        (z0 + i_zh * dz, v0),
+        (z0 + (i_zh - 1) * dz, v0),
+        (z1, v0 + j_below_zero * dv),
+    }
+
+
 def _orbit_center(params: Params) -> float:
     """Return the stance-orbit center the straddle seeds should bracket.
 
@@ -78,8 +107,9 @@ def _orbit_center(params: Params) -> float:
 
 
 def default_seeds(params: Params) -> list[Seed]:
-    """Return edge seeds, plus orbit-straddling points when oscillating."""
-    seeds = _edge_seeds()
+    """Return edge seeds, minus soft-landing prunes, plus straddle points."""
+    removals = _soft_landing_removals(params) if params.soft_landing else set()
+    seeds = [s for s in _edge_seeds() if s not in removals]
     if params.rho > 0.0:
         center = _orbit_center(params)
         seeds.append((center - EPSILON, 0.0))

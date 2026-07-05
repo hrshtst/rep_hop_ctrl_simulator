@@ -128,7 +128,8 @@ class MainWindow(QMainWindow):
         )
         prev = self._curve_params
         if prev is None or any(
-            abs(getattr(logged, f) - getattr(prev, f)) > CURVE_PARAM_TOL for f in ("za", "zm", "zb", "rho", "k")
+            abs(getattr(logged, f) - getattr(prev, f)) > CURVE_PARAM_TOL
+            for f in ("za", "zm", "zb", "rho", "k", "soft_landing")
         ):
             self._curve_params = logged
             self._curve_worker.request(logged)
