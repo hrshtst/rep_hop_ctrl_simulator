@@ -150,3 +150,24 @@ def test_phase_enum_values():
     assert int(rhc.Phase.COMPRESSION) == 1
     assert int(rhc.Phase.EXTENSION) == 2
     assert int(rhc.Phase.RISING) == 3
+
+
+def test_solution_curves_stop_when_leaving_region():
+    sim = rhc.DynmorphSim()
+    region = (0.16, 0.40, -2.0, 2.0)
+    seed = [(0.39, 1.9)]  # near the top-right corner, moving up and out
+    n_full = int(0.5 / 4e-4)
+    (full,) = sim.solution_curves(seed, duration=0.5, dt=4e-4, stride=1)
+    (bounded,) = sim.solution_curves(seed, duration=0.5, dt=4e-4, stride=1, region=region)
+    assert len(full[0]) == n_full
+    assert len(bounded[0]) < n_full / 10  # exits the box almost immediately
+    z, vz = bounded
+    assert np.all((z >= region[0]) & (z <= region[1]))
+    assert np.all((vz >= region[2]) & (vz <= region[3]))
+
+
+def test_solution_curves_on_boundary_seed_counts_as_inside():
+    sim = rhc.DynmorphSim()
+    region = (0.16, 0.40, -2.0, 2.0)
+    (curve,) = sim.solution_curves([(0.40, 2.0)], duration=0.1, dt=4e-4, stride=1, region=region)
+    assert len(curve[0]) >= 1  # the corner seed itself is recorded

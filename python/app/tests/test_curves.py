@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 
+import numpy as np
 import pytest
 
 from rhc_demo.curves import (
@@ -75,3 +76,10 @@ def test_worker_returns_result_once():
         assert worker.take_result() is None
     finally:
         worker.close()
+
+
+def test_curve_points_stay_inside_view_region():
+    _, curves = compute_curves(Params(rho=1.0))
+    for z, vz in curves:
+        assert np.all((z >= PHASE_Z_RANGE[0]) & (z <= PHASE_Z_RANGE[1]))
+        assert np.all((vz >= PHASE_VZ_RANGE[0]) & (vz <= PHASE_VZ_RANGE[1]))

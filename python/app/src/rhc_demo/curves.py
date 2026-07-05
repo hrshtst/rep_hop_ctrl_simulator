@@ -34,9 +34,13 @@ N_Z = 10  # along each horizontal edge (stepping z)
 N_VZ = 10  # along each vertical edge (stepping vz)
 EPSILON = 1e-6
 
-CURVE_DURATION = 0.8  # s of rollout per seed
+CURVE_DURATION = 0.8  # s of rollout per seed (upper bound; see REGION)
 CURVE_DT = 4e-4
 CURVE_STRIDE = 4
+
+# Rollouts stop as soon as they leave the view box (the C plotter's
+# out-of-region check), so no time is spent evolving off-view segments.
+REGION = (*PHASE_Z_RANGE, *PHASE_VZ_RANGE)
 
 Seed = tuple[float, float]
 Curve = tuple[np.ndarray, np.ndarray]
@@ -98,7 +102,7 @@ def compute_curves(params: Params) -> tuple[list[Seed], list[Curve]]:
     sim.k = params.k
     sim.soft_landing = params.soft_landing
     seeds = default_seeds(params)
-    return seeds, sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE)
+    return seeds, sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE, region=REGION)
 
 
 class CurveWorker:

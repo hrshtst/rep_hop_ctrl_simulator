@@ -8,10 +8,12 @@
 // to NumPy without copying (the arrays take ownership of the buffers).
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <new>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -37,6 +39,9 @@ struct Records {
 
 // A single (z, vz) solution curve for the phase portrait.
 using Curve = std::pair<std::vector<double>, std::vector<double>>;
+
+// Bounding box (zmin, zmax, vzmin, vzmax) for curve rollouts.
+using Region = std::array<double, 4>;
 
 class DynmorphSim {
  public:
@@ -115,9 +120,14 @@ class DynmorphSim {
 
   // Roll out each (z0, vz0) seed with the current parameters and return
   // the (z, vz) samples, decimated by `stride`, for phase-portrait
-  // solution curves. Also runs on a throwaway system.
+  // solution curves. Also runs on a throwaway system. When a `region`
+  // (zmin, zmax, vzmin, vzmax) is given, a curve stops as soon as its
+  // state leaves it — mirroring ppp_simulator_is_out_of_region() in the
+  // C phase-portrait plotter — so no work is spent evolving off-view
+  // segments (the boundary itself counts as inside).
   [[nodiscard]] std::vector<Curve> solution_curves(const std::vector<std::pair<double, double>> &seeds,
-                                                   double duration, double dt, int stride = 1) const {
+                                                   double duration, double dt, int stride = 1,
+                                                   const std::optional<Region> &region = std::nullopt) const {
     DynmorphSim tmp(model_mass(&model_), ctrl_dynmorph_type(&ctrl_));
     tmp.cmd_ = cmd_;
     const auto n_steps = static_cast<int>(std::llround(duration / dt));
@@ -130,9 +140,14 @@ class DynmorphSim {
       c.first.reserve(n_steps / stride + 1);
       c.second.reserve(n_steps / stride + 1);
       for (int i = 0; i < n_steps; ++i) {
+        const double z = vec_elem(simulator_state(&tmp.sim_), 0);
+        const double vz = vec_elem(simulator_state(&tmp.sim_), 1);
+        if (region && (z < (*region)[0] || z > (*region)[1] || vz < (*region)[2] || vz > (*region)[3])) {
+          break;
+        }
         if (i % stride == 0) {
-          c.first.push_back(vec_elem(simulator_state(&tmp.sim_), 0));
-          c.second.push_back(vec_elem(simulator_state(&tmp.sim_), 1));
+          c.first.push_back(z);
+          c.second.push_back(vz);
         }
         simulator_update(&tmp.sim_, dt, nullptr);
         simulator_update_time(&tmp.sim_, dt);

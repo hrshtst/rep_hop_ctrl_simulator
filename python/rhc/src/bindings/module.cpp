@@ -6,6 +6,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -138,16 +139,18 @@ PYBIND11_MODULE(_rhc, m) {
       .def(
           "solution_curves",
           [](const DynmorphSim &self, const std::vector<std::pair<double, double>> &seeds, double duration,
-             double dt, int stride) {
+             double dt, int stride, const std::optional<Region> &region) {
             std::vector<Curve> curves;
             {
               py::gil_scoped_release release;
-              curves = self.solution_curves(seeds, duration, dt, stride);
+              curves = self.solution_curves(seeds, duration, dt, stride, region);
             }
             return curves_to_list(std::move(curves));
           },
           py::arg("seeds"), py::arg("duration") = 1.0, py::arg("dt") = 4e-4, py::arg("stride") = 5,
-          "Phase-portrait solution curves: one (z, vz) array pair per seed.")
+          py::arg("region") = py::none(),
+          "Phase-portrait solution curves: one (z, vz) array pair per seed. A curve\n"
+          "stops early once its state leaves region = (zmin, zmax, vzmin, vzmax).")
       .def("csv_header", &DynmorphSim::csv_header,
            "The exact CSV header line the C pipeline writes (starts with 'tag').")
       .def_property_readonly("stand_start_z", &DynmorphSim::stand_start_z)
