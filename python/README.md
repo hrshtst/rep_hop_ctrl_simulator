@@ -4,13 +4,16 @@ A `uv` workspace with two packages:
 
 - **`rhc/`** — pybind11 bindings of the `rep_hop_ctrl_simulator` C library. The
   extension compiles the library's C sources (`../src/*.c`) directly, so no
-  separate shared-library install is needed.
+  separate shared-library install is needed. The API is a single high-level
+  facade, `rhc.DynmorphSim`, that owns the whole coupled C system and steps it
+  in batches with the GIL released.
 - **`app/`** (`rhc-demo`) — a PyQt6 application that demonstrates the controller
   from the paper *"Seamless Control Between Standing and Repetitive Hopping for
-  Legged Robots Based on Dynamics Morphing"*: a 2D biped animation of COM height
-  and contact state, a live `(z, ż)` phase portrait, and sliders that morph **ρ**
-  between standing (ρ=0, an equilibrium point) and hopping (ρ=1, a limit cycle)
-  and retarget the apex/standing/crouching heights on the fly.
+  Legged Robots Based on Dynamics Morphing"*: a live `(z, ż)` phase portrait, a
+  2D schematic robot view (knee-right, per the paper's Fig. 2), and a control
+  panel whose sliders morph **ρ̃** between standing (ρ=0, an equilibrium point)
+  and hopping (ρ=1, a limit cycle) and retarget the apex/standing/crouching
+  heights on the fly under automatic kinematic-constraint clamping.
 
 ## Building from a clean checkout
 
@@ -44,22 +47,42 @@ rebuild.)
 
 ## Run the demo
 
+The application has three execution modes:
+
 ```sh
-uv run rhc-demo
+uv run rhc-demo                                  # interactive live simulation
+uv run rhc-demo replay data.csv [--speed 1.5]    # replay a recorded time series
+uv run rhc-demo headless data.csv -o out/ --mp4 --gif   # offscreen frames + video
 ```
 
-Drag **ρ** from 1 → 0 to morph from hopping to standing (the driver slews ρ at
-a bounded rate, so even a slider jump morphs continuously); change **z̃a** to
-retarget the apex live; press **Disturb ↑** (`U`) to kick the COM during flight
-or **Disturb ↓** (`D`) to push it down during stance — the paper's Simulation IV
-force pulses — and watch the soft landing; toggle the **Soft landing** checkbox
-to compare against the unadjusted landing impact on the scrolling z/fz strip
-chart, which holds the windowed peak GRF in its corner; **Reset** (`R`) restarts.
+**Interactive** starts from the paper's stand start `(z, ż) = ((z_h+z_m)/2, 0)`
+with the paper's default parameters. Drag **ρ̃** from 0 → 1 to morph from
+standing to hopping (the engine slews ρ at a bounded rate, so even a slider
+jump morphs continuously); retarget **z̃_a**, **z̃_m**, **z̃_b** live — the
+sliders enforce `z̃_b < z̃_m < z_h` and `z̃_b < z̃_a` automatically; click and
+drag vertically inside the robot view to apply an external vertical force f_e
+(the plant is 1-DOF, so the horizontal drag component is discarded); toggle the
+soft-landing strategy; pause/step/reset; and **Export CSV** to save the session
+in the simulator's logger schema for later replay or headless rendering.
 
-## Test and lint
+**Replay** accepts any logger-schema CSV — the files produced by the paper
+repository's `graph/make_time_series.sh`, or an exported interactive session.
+The parameter widgets are disabled and mirror the logged values.
+
+**Headless** renders the replay offscreen (`QT_QPA_PLATFORM=offscreen`; no
+window is shown — under Wayland capturing live windows is restricted, so
+offscreen rendering is the supported path) into a deterministic PNG frame
+sequence, then optionally encodes MP4/GIF with the ffmpeg binary bundled by
+`imageio-ffmpeg`.
+
+Qt platform is auto-detected (native Wayland on GNOME, WSLg, or X11); set
+`QT_QPA_PLATFORM` explicitly only to override.
+
+## Test, lint, benchmark
 
 ```sh
-uv run pytest          # binding + app tests
+uv run pytest          # binding + app tests (includes performance benchmarks)
+uv run pytest rhc/tests/test_benchmark.py -s   # print measured stepping speed
 uv run ruff check .
 ```
 
