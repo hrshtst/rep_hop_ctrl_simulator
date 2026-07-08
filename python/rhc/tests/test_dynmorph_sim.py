@@ -171,3 +171,57 @@ def test_solution_curves_on_boundary_seed_counts_as_inside():
     region = (0.16, 0.40, -2.0, 2.0)
     (curve,) = sim.solution_curves([(0.40, 2.0)], duration=0.1, dt=4e-4, stride=1, region=region)
     assert len(curve[0]) >= 1  # the corner seed itself is recorded
+
+
+def test_limit_cycle_absent_for_regulator():
+    sim = rhc.DynmorphSim()  # rho = 0
+    z, vz = sim.limit_cycle()
+    assert len(z) == len(vz) == 0
+
+
+def test_limit_cycle_absent_below_bifurcation():
+    sim = rhc.DynmorphSim()
+    sim.rho = 0.9 * float(np.exp(-sim.k))  # just below rho = exp(-k)
+    z, _vz = sim.limit_cycle()
+    assert len(z) == 0
+
+
+def test_limit_cycle_matches_designed_hopping_orbit():
+    sim = rhc.DynmorphSim()
+    sim.rho = 1.0
+    z, vz = sim.limit_cycle()
+    assert len(z) == len(vz) > 10
+    # Closed loop, apex at the target and bottom at the adjusted zb
+    # (calc_zb(0.28, 0.26, 0.255) = 0.24 in the paper's nominal design).
+    assert z[0] == z[-1]
+    assert vz[0] == vz[-1]
+    assert z.max() == pytest.approx(sim.za, abs=1e-3)
+    assert z.min() == pytest.approx(0.24, abs=1e-3)
+    assert vz.max() == pytest.approx(-vz.min(), abs=1e-2)
+
+
+def test_limit_cycle_shrinks_with_rho():
+    sim = rhc.DynmorphSim()
+    sim.rho = 1.0
+    z_full, _ = sim.limit_cycle()
+    sim.rho = 0.5
+    z_half, _ = sim.limit_cycle()
+    assert 0.0 < z_half.max() - z_half.min() < z_full.max() - z_full.min()
+
+
+def test_limit_cycle_squat_stays_below_zh():
+    sim = rhc.DynmorphSim()
+    sim.rho = 1.0
+    sim.za = 0.255  # below zh: continuous squatting
+    z, _vz = sim.limit_cycle()
+    assert len(z) > 10
+    assert z.max() <= sim.zh + 1e-6
+    assert z.min() == pytest.approx(sim.zb, abs=1e-3)
+
+
+def test_limit_cycle_leaves_live_state_untouched():
+    sim = rhc.DynmorphSim()
+    sim.rho = 1.0
+    before = (sim.t, sim.z, sim.vz)
+    sim.limit_cycle()
+    assert (sim.t, sim.z, sim.vz) == before

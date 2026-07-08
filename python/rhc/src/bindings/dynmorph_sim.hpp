@@ -157,6 +157,84 @@ class DynmorphSim {
     return curves;
   }
 
+  // Trace the steady-state limit cycle of the current parameters as one
+  // closed (z, vz) loop. The cycle exists iff the nonlinear damping term
+  // has a root gamma_lc > 0 (rho > exp(-k)); otherwise the standing
+  // equilibrium is stable and an empty curve is returned. Rather than
+  // drawing the analytic ellipse-plus-parabola (exact only for
+  // q_scale = 1), a throwaway copy of the system is seeded at the
+  // analytic cycle bottom, settled, and one period is recorded between
+  // successive crouching-bottom events — so the returned loop is the
+  // attractor of the actual piecewise dynamics, adjustment layer
+  // included. Safe to call with the GIL released.
+  [[nodiscard]] Curve limit_cycle(double settle = 2.0, double dt = 1e-4, int stride = 5) const {
+    Curve cyc;
+    const double gamma_lc = ctrl_dynmorph_calc_gamma_lc(cmd_.dynmorph.rho, cmd_.dynmorph.k);
+    if (!(gamma_lc > 0.0)) {
+      return cyc;
+    }
+    // Steady-state orbit center and radius: the motion-limit / squat
+    // branch of ctrl_dynmorph_update_params_default with the achieved
+    // apex equal to the commanded za.
+    double zm_eff = cmd_.zm;
+    double zb_eff = cmd_.zb;
+    const double zb_kin = ctrl_dynmorph_calc_zb(cmd_.za, cmd_.zh, cmd_.zm);
+    if (cmd_.za > cmd_.zh && cmd_.zb < zb_kin) {
+      zb_eff = zb_kin;
+    } else {
+      zm_eff = ctrl_dynmorph_calc_zm(cmd_.za, cmd_.zh, cmd_.zb);
+    }
+    const double r = zm_eff - zb_eff;
+    if (!(r > 0.0)) {
+      return cyc;
+    }
+    check_step_args(0, dt, stride);
+    DynmorphSim tmp(model_mass(&model_), ctrl_dynmorph_type(&ctrl_));
+    tmp.cmd_ = cmd_;
+    tmp.reset(zm_eff - gamma_lc * r, 0.0);
+    const auto n_settle = static_cast<int>(std::llround(settle / dt));
+    for (int i = 0; i < n_settle; ++i) {
+      tmp.step_once(dt);
+    }
+    // One period: from the first crouching bottom (vz crosses - to +)
+    // to the next. The guard covers the slowest cycle (low q_scale
+    // squat plus the tallest flight arc) many times over.
+    const auto n_max = static_cast<int>(std::llround(2.0 / dt));
+    double prev_vz = tmp.vz();
+    bool tracing = false;
+    bool closed = false;
+    int n_traced = 0;
+    for (int i = 0; i < n_max; ++i) {
+      tmp.step_once(dt);
+      const double vz_now = tmp.vz();
+      const bool bottom = prev_vz < 0.0 && vz_now >= 0.0;
+      prev_vz = vz_now;
+      if (!tracing) {
+        tracing = bottom;
+        if (!tracing) {
+          continue;
+        }
+      } else if (bottom) {
+        closed = true;
+        break;
+      }
+      if (n_traced % stride == 0) {
+        cyc.first.push_back(tmp.z());
+        cyc.second.push_back(vz_now);
+      }
+      ++n_traced;
+    }
+    if (!closed || cyc.first.size() < 2) {
+      cyc.first.clear();
+      cyc.second.clear();
+      return cyc;
+    }
+    // Close the loop for direct polyline drawing.
+    cyc.first.push_back(cyc.first.front());
+    cyc.second.push_back(cyc.second.front());
+    return cyc;
+  }
+
   // The exact CSV header the C pipeline writes (including leading "tag").
   [[nodiscard]] std::string csv_header() {
     char *buf = nullptr;
@@ -212,6 +290,11 @@ class DynmorphSim {
   [[nodiscard]] double p_rho() const { return ctrl_dynmorph_params_rho(&ctrl_); }
 
  private:
+  void step_once(double dt) {
+    simulator_update(&sim_, dt, nullptr);
+    simulator_update_time(&sim_, dt);
+  }
+
   static void check_step_args(int n_steps, double dt, int record_every) {
     if (dt <= 0.0) {
       throw std::invalid_argument("dt must be positive");

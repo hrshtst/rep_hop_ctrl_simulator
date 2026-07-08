@@ -151,6 +151,20 @@ PYBIND11_MODULE(_rhc, m) {
           py::arg("region") = py::none(),
           "Phase-portrait solution curves: one (z, vz) array pair per seed. A curve\n"
           "stops early once its state leaves region = (zmin, zmax, vzmin, vzmax).")
+      .def(
+          "limit_cycle",
+          [](const DynmorphSim &self, double settle, double dt, int stride) {
+            Curve c;
+            {
+              py::gil_scoped_release release;
+              c = self.limit_cycle(settle, dt, stride);
+            }
+            return py::make_tuple(take(std::move(c.first)), take(std::move(c.second)));
+          },
+          py::arg("settle") = 2.0, py::arg("dt") = 1e-4, py::arg("stride") = 5,
+          "Steady-state limit cycle of the current parameters as one closed\n"
+          "(z, vz) loop, traced on a throwaway copy. Empty arrays when the\n"
+          "standing equilibrium is stable instead (rho <= exp(-k)).")
       .def("csv_header", &DynmorphSim::csv_header,
            "The exact CSV header line the C pipeline writes (starts with 'tag').")
       .def_property_readonly("stand_start_z", &DynmorphSim::stand_start_z)
