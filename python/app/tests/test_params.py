@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from rhc_demo.params import EPS, Params, clamp_param, with_param
+from rhc_demo.params import EPS, Q_SCALE_RANGE, Params, clamp_param, with_param
 
 
 def test_defaults_match_paper():
@@ -12,6 +12,7 @@ def test_defaults_match_paper():
     assert (p.za, p.zh, p.zm, p.zb) == (0.28, 0.26, 0.255, 0.23)
     assert p.rho == 0.0
     assert p.k == 4.0
+    assert p.q_scale == 1.0
     assert p.mass == 10.0
     assert p.soft_landing is True
 
@@ -47,6 +48,13 @@ def test_rho_clamped_to_unit_interval():
     p = Params()
     assert clamp_param(p, "rho", 1.5) == 1.0
     assert clamp_param(p, "rho", -0.5) == 0.0
+
+
+def test_q_scale_clamped_to_range():
+    p = Params()
+    assert clamp_param(p, "q_scale", 10.0) == Q_SCALE_RANGE[1]
+    assert clamp_param(p, "q_scale", 0.0) == Q_SCALE_RANGE[0]
+    assert clamp_param(p, "q_scale", 1.3) == pytest.approx(1.3)
 
 
 def test_unknown_param_raises():

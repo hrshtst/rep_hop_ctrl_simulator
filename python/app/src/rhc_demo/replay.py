@@ -46,6 +46,7 @@ class ReplaySource:
         self._zb = _column(data, "zb", nan)
         self._rho = _column(data, "rho", nan)
         self._k = _column(data, "k", nan)
+        self._q_scale = _column(data, "q_scale", nan)
         self._soft_landing = _column(data, "soft_landing", 1.0)
         self._p_za = _column(data, "p_za", nan)
         self._p_zm = _column(data, "p_zm", nan)
@@ -77,6 +78,10 @@ class ReplaySource:
         if not paused:
             self._clock = time.monotonic()
         self._paused = paused
+
+    def set_speed(self, speed: float) -> None:
+        """Set the wall-clock playback speed factor (1.0 = real time)."""
+        self.speed = speed
 
     def request_step(self, duration: float = STEP_INCREMENT) -> None:
         """While paused, move the cursor forward by ``duration`` seconds."""
@@ -124,6 +129,7 @@ class ReplaySource:
             zb=float(self._zb[i]),
             rho=float(self._rho[i]),
             k=float(self._k[i]),
+            q_scale=float(self._q_scale[i]),
             soft_landing=bool(self._soft_landing[i]),
             p_za=float(self._p_za[i]),
             p_zm=float(self._p_zm[i]),

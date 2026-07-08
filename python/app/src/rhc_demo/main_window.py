@@ -46,8 +46,10 @@ class MainWindow(QMainWindow):
         self.phase_view = PhaseView(show_seeds=show_seeds)
         self.robot_view = RobotView(interactive=self.interactive)
         self.panel = ControlPanel(params, interactive=self.interactive)
+        # The phase portrait gets the widest pane so it renders close to
+        # a square; its z-range upper limit is widened to match.
         root = QHBoxLayout()
-        root.addWidget(self.phase_view, 5)
+        root.addWidget(self.phase_view, 7)
         root.addWidget(self.robot_view, 5)
         root.addWidget(self.panel, 3)
         central = QWidget()
@@ -82,6 +84,7 @@ class MainWindow(QMainWindow):
         p.stepRequested.connect(lambda: self.source.request_step())
         p.resetRequested.connect(self._on_reset)
         p.trailModeChanged.connect(self.phase_view.set_trail_mode)
+        p.speedChanged.connect(lambda speed: self.source.set_speed(speed))
         if self.interactive:
             p.paramChanged.connect(self._on_param_changed)
             p.softLandingChanged.connect(lambda on: self._on_param_changed("soft_landing", on))
@@ -104,8 +107,9 @@ class MainWindow(QMainWindow):
             self._maybe_refresh_replay_curves(snap)
         result = self._curve_worker.take_result()
         if result is not None:
-            seeds, curves = result
+            seeds, curves, cycle = result
             self.phase_view.set_curves(curves, seeds)
+            self.phase_view.set_limit_cycle(cycle)
         return snap
 
     # -- solution curves ---------------------------------------------------------
@@ -124,12 +128,13 @@ class MainWindow(QMainWindow):
             zb=snap.zb,
             rho=snap.rho,
             k=snap.k,
+            q_scale=snap.q_scale if not math.isnan(snap.q_scale) else 1.0,
             soft_landing=snap.soft_landing,
         )
         prev = self._curve_params
         if prev is None or any(
             abs(getattr(logged, f) - getattr(prev, f)) > CURVE_PARAM_TOL
-            for f in ("za", "zm", "zb", "rho", "k", "soft_landing")
+            for f in ("za", "zm", "zb", "rho", "k", "q_scale", "soft_landing")
         ):
             self._curve_params = logged
             self._curve_worker.request(logged)

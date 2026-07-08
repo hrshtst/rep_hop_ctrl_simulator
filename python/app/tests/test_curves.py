@@ -80,7 +80,7 @@ def test_straddle_points_bracket_squat_center():
 
 
 def test_compute_curves_pairs_each_seed_with_its_curve():
-    seeds, curves = compute_curves(Params(rho=1.0))
+    seeds, curves, _ = compute_curves(Params(rho=1.0))
     assert len(seeds) == len(curves)
     for (z0, vz0), (z, vz) in zip(seeds, curves, strict=True):
         assert z[0] == pytest.approx(z0)
@@ -97,15 +97,30 @@ def test_worker_returns_result_once():
             result = worker.take_result()
             time.sleep(0.01)
         assert result is not None
-        seeds, curves = result
+        seeds, curves, cycle = result
         assert len(seeds) == len(curves) == N_EDGE
+        assert cycle is None  # rho = 0: standing regulator, no cycle
         assert worker.take_result() is None
     finally:
         worker.close()
 
 
 def test_curve_points_stay_inside_view_region():
-    _, curves = compute_curves(Params(rho=1.0))
+    _, curves, _ = compute_curves(Params(rho=1.0))
     for z, vz in curves:
         assert np.all((z >= PHASE_Z_RANGE[0]) & (z <= PHASE_Z_RANGE[1]))
         assert np.all((vz >= PHASE_VZ_RANGE[0]) & (vz <= PHASE_VZ_RANGE[1]))
+
+
+def test_limit_cycle_present_when_hopping():
+    _, _, cycle = compute_curves(Params(rho=1.0))
+    assert cycle is not None
+    z, vz = cycle
+    assert len(z) == len(vz) > 10
+    assert z[0] == z[-1]  # closed loop
+    assert z.max() == pytest.approx(0.28, abs=1e-3)  # apex at za
+
+
+def test_limit_cycle_absent_when_standing():
+    _, _, cycle = compute_curves(Params(rho=0.0))
+    assert cycle is None

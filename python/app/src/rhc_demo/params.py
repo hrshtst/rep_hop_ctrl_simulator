@@ -17,12 +17,13 @@ ZA_RANGE = (0.20, 0.40)
 ZM_RANGE = (0.20, 0.30)
 ZB_RANGE = (0.18, 0.30)
 K_RANGE = (0.5, 16.0)
+Q_SCALE_RANGE = (0.5, 2.0)
 
 # Phase-portrait view region, shared by the phase view (its world window)
 # and the solution-curve seeding (seeds are distributed on its edges, like
 # the C plotter's pmin/pmax region) so the two always coincide.
-PHASE_Z_RANGE = (0.16, 0.40)
-PHASE_VZ_RANGE = (-2.0, 2.0)
+PHASE_Z_RANGE = (0.16, 0.44)
+PHASE_VZ_RANGE = (-2.2, 2.2)
 
 SIM_DT = 1e-4  # the paper's integration step
 RECORD_EVERY = 10  # sample the state at 1 kHz for history/export
@@ -38,6 +39,7 @@ class Params:
     zb: float = 0.23
     rho: float = 0.0
     k: float = 4.0
+    q_scale: float = 1.0
     mass: float = 10.0
     soft_landing: bool = True
 
@@ -63,6 +65,8 @@ def clamp_param(params: Params, name: str, value: float) -> float:
         return clamp(value, 0.0, 1.0)
     if name == "k":
         return clamp(value, *K_RANGE)
+    if name == "q_scale":
+        return clamp(value, *Q_SCALE_RANGE)
     msg = f"unknown parameter: {name}"
     raise ValueError(msg)
 

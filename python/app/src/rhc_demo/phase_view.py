@@ -1,10 +1,12 @@
 """Phase portrait view: (z, vz) plane of the vertical COM dynamics.
 
 Per the directive: white background; solid black axes at z = zh and
-vz = 0; thin gray solution curves; dotted boundary lines at the target
-apex (za) and the kinematic lower limit (zb); the current COM state as a
-solid red circle; and a COM history that can be toggled between a
-continuous line and a fading trail of recent states.
+vz = 0; thin gray solution curves; the stance-phase limit cycle as a
+solid black closed loop (drawn after the curves so it is never
+obscured); dotted boundary lines at the target apex (za) and the
+kinematic lower limit (zb); the current COM state as a solid red
+circle; and a COM history that can be toggled between a continuous
+line and a fading trail of recent states.
 
 For debugging the curve family, the initial seeds of the solution
 curves can be overlaid as black circles (``show_seeds``; enabled with
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
 BACKGROUND = QColor("#ffffff")
 AXIS_COLOR = QColor("#000000")
 CURVE_COLOR = QColor("#b0b0b0")
+CYCLE_COLOR = QColor("#000000")
 BOUNDARY_COLOR = QColor("#404040")
 COM_COLOR = QColor("#d62728")
 HISTORY_COLOR = QColor("#e08080")
@@ -60,8 +63,9 @@ class PhaseView(QWidget):
 
     def __init__(self, *, show_seeds: bool = False) -> None:
         super().__init__()
-        self.setMinimumSize(320, 320)
+        self.setMinimumSize(400, 320)
         self._curve_polys: list[QPolygonF] = []
+        self._cycle_poly: QPolygonF | None = None
         self._seed_pts: list[QPointF] = []
         self._show_seeds = show_seeds
         self._history = QPolygonF()
@@ -84,6 +88,15 @@ class PhaseView(QWidget):
             if len(z) >= MIN_POLYLINE
         ]
         self._seed_pts = [QPointF(z0, vz0) for z0, vz0 in seeds] if seeds else []
+        self.update()
+
+    def set_limit_cycle(self, cycle: tuple[np.ndarray, np.ndarray] | None) -> None:
+        """Set the stance-phase limit cycle loop, or None when there is none."""
+        if cycle is None:
+            self._cycle_poly = None
+        else:
+            z, vz = cycle
+            self._cycle_poly = QPolygonF([QPointF(float(z[j]), float(vz[j])) for j in range(len(z))])
         self.update()
 
     def set_show_seeds(self, on: bool) -> None:
@@ -160,6 +173,13 @@ class PhaseView(QWidget):
         if not self._trail_mode and self._history.size() >= MIN_POLYLINE:
             painter.setPen(_cosmetic_pen(HISTORY_COLOR, 1.0))
             painter.drawPolyline(self._history)
+
+        # Stance-phase limit cycle: a solid black closed loop, drawn after
+        # the solution curves and guides so it is never obscured by them.
+        if self._cycle_poly is not None and self._cycle_poly.size() >= MIN_POLYLINE:
+            painter.setPen(_cosmetic_pen(CYCLE_COLOR, 2.0))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawPolyline(self._cycle_poly)
 
     def _draw_overlay(self, painter: QPainter, tr: QTransform) -> None:
         snap = self._snap

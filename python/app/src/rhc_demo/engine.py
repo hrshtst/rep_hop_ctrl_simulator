@@ -106,6 +106,10 @@ class LiveEngine:
         """Set the external vertical force (from the robot-view drag)."""
         self._commands.put(("fe", force))
 
+    def set_speed(self, speed: float) -> None:
+        """Set the wall-clock playback speed factor (1.0 = real time)."""
+        self._commands.put(("speed", speed))
+
     def pause(self) -> None:
         self._commands.put(("pause", True))
 
@@ -188,6 +192,8 @@ class LiveEngine:
                 self._set_param_now(name, value)
             elif kind == "fe":
                 self._sim.fe = float(payload)
+            elif kind == "speed":
+                self.speed = float(payload)
             elif kind == "pause":
                 self._paused = bool(payload)
             elif kind == "step":
@@ -235,6 +241,7 @@ class LiveEngine:
             zb=sim.zb,
             rho=self.params.rho,
             k=sim.k,
+            q_scale=sim.q_scale,
             soft_landing=sim.soft_landing,
             p_za=sim.p_za,
             p_zm=sim.p_zm,
@@ -250,4 +257,5 @@ class LiveEngine:
         self._sim.zb = p.zb
         self._sim.rho = p.rho
         self._sim.k = p.k
+        self._sim.q_scale = p.q_scale
         self._sim.soft_landing = p.soft_landing

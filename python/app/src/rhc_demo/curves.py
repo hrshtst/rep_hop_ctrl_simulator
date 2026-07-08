@@ -49,6 +49,9 @@ REGION = (*PHASE_Z_RANGE, *PHASE_VZ_RANGE)
 
 Seed = tuple[float, float]
 Curve = tuple[np.ndarray, np.ndarray]
+# Seeds, their solution curves, and the limit cycle (None when the
+# standing equilibrium is stable instead, i.e. rho <= exp(-k)).
+PortraitResult = tuple[list[Seed], list[Curve], Curve | None]
 
 
 def _edge_seeds() -> list[Seed]:
@@ -117,11 +120,13 @@ def default_seeds(params: Params) -> list[Seed]:
     return seeds
 
 
-def compute_curves(params: Params) -> tuple[list[Seed], list[Curve]]:
-    """Roll out the seed family with the given parameters (blocking).
+def compute_curves(params: Params) -> PortraitResult:
+    """Roll out the seed family and limit cycle with the given parameters.
 
     Returns the seeds together with their curves so consumers (e.g. the
-    phase view's debug seed markers) always show the pair atomically.
+    phase view's debug seed markers) always show the pair atomically,
+    plus the steady-state limit cycle traced by the bindings (None when
+    the standing equilibrium is stable and no cycle exists).
     """
     sim = rhc.DynmorphSim(mass=params.mass)
     sim.za = params.za
@@ -130,9 +135,13 @@ def compute_curves(params: Params) -> tuple[list[Seed], list[Curve]]:
     sim.zb = params.zb
     sim.rho = params.rho
     sim.k = params.k
+    sim.q_scale = params.q_scale
     sim.soft_landing = params.soft_landing
     seeds = default_seeds(params)
-    return seeds, sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE, region=REGION)
+    curves = sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE, region=REGION)
+    cycle_z, cycle_vz = sim.limit_cycle()
+    cycle = (cycle_z, cycle_vz) if len(cycle_z) else None
+    return seeds, curves, cycle
 
 
 class CurveWorker:
@@ -141,7 +150,7 @@ class CurveWorker:
     def __init__(self) -> None:
         self._cond = threading.Condition()
         self._pending: Params | None = None
-        self._result: tuple[list[Seed], list[Curve]] | None = None
+        self._result: PortraitResult | None = None
         self._running = True
         self._thread = threading.Thread(target=self._loop, name="curves", daemon=True)
         self._thread.start()
@@ -152,8 +161,8 @@ class CurveWorker:
             self._pending = params
             self._cond.notify()
 
-    def take_result(self) -> tuple[list[Seed], list[Curve]] | None:
-        """Return freshly computed (seeds, curves) once, or None if not ready."""
+    def take_result(self) -> PortraitResult | None:
+        """Return freshly computed (seeds, curves, cycle) once, or None if not ready."""
         with self._cond:
             result = self._result
             self._result = None

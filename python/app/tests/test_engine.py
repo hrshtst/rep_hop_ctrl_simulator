@@ -110,10 +110,35 @@ def test_export_csv(engine, tmp_path):
 
 
 def test_custom_params_applied():
-    eng = LiveEngine(Params(za=0.31, rho=1.0, soft_landing=False))
+    eng = LiveEngine(Params(za=0.31, rho=1.0, q_scale=1.5, soft_landing=False))
     try:
         snap, _ = eng.frame()
         assert snap.za == pytest.approx(0.31)
+        assert snap.q_scale == pytest.approx(1.5)
         assert snap.soft_landing is False
     finally:
         eng.close()
+
+
+def test_playback_speed_slows_simulated_time(engine):
+    engine.start()
+    engine.set_speed(0.25)
+    assert _wait_until(lambda: engine.frame()[0].t > 0.01)
+    t0 = engine.frame()[0].t
+    time.sleep(0.4)
+    elapsed = engine.frame()[0].t - t0
+    assert elapsed == pytest.approx(0.1, abs=0.05)  # quarter of wall time
+
+
+def test_reset_frees_recorded_export_history(engine, tmp_path):
+    engine.start()
+    assert _wait_until(lambda: engine.frame()[0].t > 0.3)
+    engine.reset()
+    assert _wait_until(lambda: engine.frame()[0].t < 0.3)
+    engine.set_paused(True)
+    time.sleep(0.05)
+    rows = engine.export_csv(tmp_path / "after_reset.csv")
+    snap, _ = engine.frame()
+    # Only the post-reset session remains: about 1 kHz sampling of snap.t
+    # seconds, far less than the pre-reset history would add.
+    assert rows == pytest.approx(snap.t * 1000, abs=100)

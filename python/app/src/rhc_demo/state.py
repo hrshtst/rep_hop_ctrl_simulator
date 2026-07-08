@@ -30,6 +30,7 @@ class Snapshot:
     zb: float = float("nan")
     rho: float = float("nan")
     k: float = float("nan")
+    q_scale: float = float("nan")
     soft_landing: bool = True
     p_za: float = float("nan")
     p_zm: float = float("nan")

@@ -1,12 +1,13 @@
 """Control panel: parameter sliders, toggles, and execution controls.
 
-Sliders cover the morphing parameter rho and the target heights za, zm,
-zb; slider logic clamps requested values through
-:func:`rhc_demo.params.clamp_param` so the kinematic constraints
-``zb < zm < zh`` and ``zb < za`` are never violated. zh is a fixed robot
-constant and is displayed, not adjustable. Execution controls (pause,
-reset, step) work in both replay and interactive modes; in replay mode
-the parameter widgets are disabled and mirror the logged values.
+Sliders cover the morphing parameter rho, the target heights za, zm,
+zb, and the controller gains k and q; slider logic clamps requested
+values through :func:`rhc_demo.params.clamp_param` so the kinematic
+constraints ``zb < zm < zh`` and ``zb < za`` are never violated. zh is
+a fixed robot constant and is displayed, not adjustable. Execution
+controls (pause, reset, step) and the playback-speed radio buttons work
+in both replay and interactive modes; in replay mode the parameter
+widgets are disabled and mirror the logged values.
 """
 
 from __future__ import annotations
@@ -22,18 +23,20 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QLabel,
     QPushButton,
+    QRadioButton,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
-from rhc_demo.params import K_RANGE, ZA_RANGE, ZB_RANGE, ZM_RANGE, Params, clamp_param
+from rhc_demo.params import K_RANGE, Q_SCALE_RANGE, ZA_RANGE, ZB_RANGE, ZM_RANGE, Params, clamp_param
 from rhc_demo.state import Snapshot, fmt
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 SLIDER_TICKS = 1000
+PLAYBACK_SPEEDS = (1.0, 0.75, 0.5, 0.25)
 
 
 class _ParamSlider(QWidget):
@@ -94,6 +97,7 @@ class ControlPanel(QWidget):
     stepRequested = pyqtSignal()
     resetRequested = pyqtSignal()
     exportRequested = pyqtSignal()
+    speedChanged = pyqtSignal(float)
 
     def __init__(self, params: Params, *, interactive: bool = True) -> None:
         super().__init__()
@@ -104,6 +108,7 @@ class ControlPanel(QWidget):
         root = QVBoxLayout()
         root.addWidget(self._make_param_group(params))
         root.addWidget(self._make_toggle_group(params))
+        root.addWidget(self._make_speed_group())
         root.addWidget(self._make_execution_group())
         self._readout = QLabel()
         self._readout.setTextFormat(Qt.TextFormat.PlainText)
@@ -126,6 +131,7 @@ class ControlPanel(QWidget):
             ("zm", "z̃_m  standing height", ZM_RANGE, p.zm, "m"),
             ("zb", "z̃_b  lower limit", ZB_RANGE, p.zb, "m"),
             ("k", "k  convergence gain", K_RANGE, p.k, ""),
+            ("q_scale", "q  frequency scale", Q_SCALE_RANGE, p.q_scale, ""),
         ]
         for name, label, (lo, hi), value, unit in specs:
             slider = _ParamSlider(label, lo, hi, value, unit)
@@ -161,6 +167,26 @@ class ControlPanel(QWidget):
         box.addWidget(self._trail_mode)
         group.setLayout(box)
         return group
+
+    def _make_speed_group(self) -> QGroupBox:
+        group = QGroupBox("Playback speed")
+        grid = QGridLayout()
+        self._speed_buttons: dict[float, QRadioButton] = {}
+        for i, speed in enumerate(PLAYBACK_SPEEDS):
+            button = QRadioButton(f"{speed}x")
+            button.setChecked(speed == 1.0)
+            button.toggled.connect(self._make_speed_handler(speed))
+            self._speed_buttons[speed] = button
+            grid.addWidget(button, i // 2, i % 2)
+        group.setLayout(grid)
+        return group
+
+    def _make_speed_handler(self, speed: float) -> Callable[[bool], None]:
+        def handler(checked: bool) -> None:
+            if checked:
+                self.speedChanged.emit(speed)
+
+        return handler
 
     def _make_execution_group(self) -> QGroupBox:
         group = QGroupBox("Execution")
@@ -199,7 +225,7 @@ class ControlPanel(QWidget):
 
     def reflect_snapshot(self, snap: Snapshot) -> None:
         """In replay mode, mirror the logged parameter values on the widgets."""
-        for name in ("rho", "za", "zm", "zb", "k"):
+        for name in ("rho", "za", "zm", "zb", "k", "q_scale"):
             self._sliders[name].set_value(getattr(snap, name))
         if not math.isnan(snap.zh):
             self._zh_label.setText(f"z_h = {snap.zh:.3f} m (robot constant)")

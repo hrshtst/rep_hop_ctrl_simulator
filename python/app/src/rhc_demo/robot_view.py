@@ -1,11 +1,12 @@
 """Robot view: 2D schematic of the one-legged robot (paper Fig. 2).
 
-Light gray articulated links with the knee bending to the right; the COM
-drawn as a red circle with a Secchi-disk pattern; the ground reaction
-force as a blue arrow from the contact point; the external force as a
-purple arrow at the COM. The plant is a 1-DOF vertical model, so the
-external force is vertical only: dragging in the view maps the vertical
-drag component to fe (the horizontal component is discarded).
+Light gray capsule-shaped links with the knee bending to the right; the
+COM drawn as a red circle with a Secchi-disk pattern, lifted slightly
+off the hip joint so the joint stays visible; the ground reaction force
+as a blue arrow from the contact point; the external force as a purple
+arrow at the COM. The plant is a 1-DOF vertical model, so the external
+force is vertical only: dragging in the view maps the vertical drag
+component to fe (the horizontal component is discarded).
 
 Contact state follows the controller phase: airborne when z > zh, in
 contact during compression/extension; the leg is drawn at full reach in
@@ -18,7 +19,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPointF, Qt, pyqtSignal
+from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QPolygonF
 from PyQt6.QtWidgets import QWidget
 
@@ -38,20 +39,29 @@ GRF_COLOR = QColor("#1f6feb")  # blue: ground reaction force fz
 FE_COLOR = QColor("#9467bd")  # purple: external force fe
 LABEL_COLOR = QColor("#606060")
 
-Z_VIEW_MAX = 0.45  # metres mapped to the top of the drawing area
+Z_VIEW_MAX = 0.56  # metres mapped to the top of the drawing area
 MARGIN = 18.0
 
-GRF_PX_PER_N = 0.35  # arrow length scaling
-FE_PX_PER_N = 0.35
-FE_N_PER_PX = 3.0  # drag sensitivity
+GRF_PX_PER_N = 0.5  # arrow length scaling
+FE_PX_PER_N = 0.5
+FE_N_PER_PX = 1.5  # drag sensitivity (larger mouse travel per newton)
 FE_MAX = 800.0  # |fe| cap, N
 
-LINK_WIDTH = 5.0
-JOINT_RADIUS = 5.0
-COM_RADIUS = 13.0
+# Link geometry in metres (scaled with the robot), radii in pixels.
+BODY_LEN = 0.15  # body link above the hip: long and thin
+BODY_WIDTH = 0.028
+LEG_WIDTH = 0.016  # thigh / shank / foot capsule thickness
+FOOT_LEN = 0.045
+JOINT_RADIUS = 7.0
+COM_RADIUS = 17.0
+# Lift the Secchi disk off the hip so the body-thigh joint stays visible.
+COM_OFFSET = COM_RADIUS + JOINT_RADIUS + 2.0
+
+ARROW_WIDTH = 4.0
+ARROW_HEAD = 15.0
 
 
-def _arrow(painter: QPainter, start: QPointF, end: QPointF, color: QColor, width: float = 3.0) -> None:
+def _arrow(painter: QPainter, start: QPointF, end: QPointF, color: QColor, width: float = ARROW_WIDTH) -> None:
     """Draw a line with a filled arrowhead at ``end``."""
     dx, dy = end.x() - start.x(), end.y() - start.y()
     length = math.hypot(dx, dy)
@@ -60,12 +70,26 @@ def _arrow(painter: QPainter, start: QPointF, end: QPointF, color: QColor, width
     painter.setPen(QPen(color, width))
     painter.drawLine(start, end)
     ux, uy = dx / length, dy / length
-    head = 9.0
+    head = ARROW_HEAD
     left = QPointF(end.x() - head * ux + head * 0.5 * uy, end.y() - head * uy - head * 0.5 * ux)
     right = QPointF(end.x() - head * ux - head * 0.5 * uy, end.y() - head * uy + head * 0.5 * ux)
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(QBrush(color))
     painter.drawPolygon(QPolygonF([end, left, right]))
+
+
+def _link(painter: QPainter, a: QPointF, b: QPointF, width: float) -> None:
+    """Draw a capsule-shaped link outline spanning joints ``a`` to ``b``."""
+    dx, dy = b.x() - a.x(), b.y() - a.y()
+    length = math.hypot(dx, dy)
+    if length < 1.0:
+        return
+    radius = width / 2.0
+    painter.save()
+    painter.translate(a)
+    painter.rotate(math.degrees(math.atan2(dy, dx)))
+    painter.drawRoundedRect(QRectF(-radius, -radius, length + width, width), radius, radius)
+    painter.restore()
 
 
 class RobotView(QWidget):
@@ -151,6 +175,7 @@ class RobotView(QWidget):
         for value, style, label in (
             (snap.za, Qt.PenStyle.DashLine, "z̃_a"),
             (snap.zh, Qt.PenStyle.DotLine, "z_h"),
+            (snap.zb, Qt.PenStyle.DashLine, "z̃_b"),
         ):
             if math.isnan(value):
                 continue
@@ -178,46 +203,41 @@ class RobotView(QWidget):
         knee = QPointF(cx + offset, hip.y() + half)
         return hip, knee, foot
 
+    def _com_center(self, hip: QPointF) -> QPointF:
+        """Centre of the Secchi disk, lifted off the hip joint."""
+        return QPointF(hip.x(), hip.y() - COM_OFFSET)
+
     def _draw_robot(self, painter: QPainter, snap: Snapshot) -> None:
         hip, knee, foot = self._leg_points(snap)
         scale = self._scale()
 
-        # Torso: an abstract rounded outline above the hip.
-        torso_w = 0.055 * scale
-        torso_h = 0.10 * scale
+        # Links: capsule-shaped outlines — the long thin body above the
+        # hip, then thigh, shank, and a short foot segment.
         painter.setPen(QPen(LINK_COLOR, 2))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRoundedRect(
-            int(hip.x() - torso_w / 2),
-            int(hip.y() - torso_h * 0.82),
-            int(torso_w),
-            int(torso_h),
-            8.0,
-            8.0,
-        )
-
-        # Links: thigh and shank, plus a small foot segment.
-        painter.setPen(QPen(LINK_COLOR, LINK_WIDTH, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.drawLine(hip, knee)
-        painter.drawLine(knee, foot)
-        painter.drawLine(foot, QPointF(foot.x() + 0.035 * scale, foot.y()))
+        _link(painter, hip, QPointF(hip.x(), hip.y() - BODY_LEN * scale), BODY_WIDTH * scale)
+        _link(painter, hip, knee, LEG_WIDTH * scale)
+        _link(painter, knee, foot, LEG_WIDTH * scale)
+        _link(painter, foot, QPointF(foot.x() + FOOT_LEN * scale, foot.y()), LEG_WIDTH * scale)
 
         # Joints.
-        painter.setPen(QPen(JOINT_COLOR, 1))
+        painter.setPen(QPen(JOINT_COLOR, 1.5))
         painter.setBrush(QBrush(BACKGROUND))
-        for joint in (knee, foot):
+        for joint in (hip, knee, foot):
             painter.drawEllipse(joint, JOINT_RADIUS, JOINT_RADIUS)
 
-        # COM: red circle with a Secchi-disk pattern (alternating quadrants).
+        # COM: red circle with a Secchi-disk pattern (alternating
+        # quadrants), drawn on the body just above the hip joint.
+        com = self._com_center(hip)
         painter.setPen(QPen(COM_RED.darker(130), 1.5))
         painter.setBrush(QBrush(COM_WHITE))
-        painter.drawEllipse(hip, COM_RADIUS, COM_RADIUS)
+        painter.drawEllipse(com, COM_RADIUS, COM_RADIUS)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(COM_RED))
         for start_angle in (0, 180):  # degrees; Qt uses 1/16 deg units
             painter.drawPie(
-                int(hip.x() - COM_RADIUS),
-                int(hip.y() - COM_RADIUS),
+                int(com.x() - COM_RADIUS),
+                int(com.y() - COM_RADIUS),
                 int(2 * COM_RADIUS),
                 int(2 * COM_RADIUS),
                 start_angle * 16,
@@ -225,20 +245,24 @@ class RobotView(QWidget):
             )
         painter.setPen(QPen(COM_RED.darker(130), 1.5))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawEllipse(hip, COM_RADIUS, COM_RADIUS)
+        painter.drawEllipse(com, COM_RADIUS, COM_RADIUS)
 
     def _draw_forces(self, painter: QPainter, snap: Snapshot) -> None:
         hip, _, foot = self._leg_points(snap)
-        # Ground reaction force: blue arrow from the contact point (stance only).
+        # Ground reaction force: blue arrow from the contact point (stance
+        # only). The magnitude label stays put near the ground instead of
+        # riding the arrow tip.
         if snap.contact and snap.fz > 1.0:
             length = min(snap.fz * GRF_PX_PER_N, foot.y() - MARGIN)
             end = QPointF(foot.x(), foot.y() - length)
             _arrow(painter, foot, end, GRF_COLOR)
             painter.setPen(QPen(GRF_COLOR, 1))
-            painter.drawText(QPointF(end.x() + 8.0, end.y() + 12.0), f"f_z = {snap.fz:.0f} N")
-        # External force: purple vertical arrow at the COM.
+            painter.drawText(QPointF(foot.x() + 16.0, self._ground_y() - 8.0), f"f_z = {snap.fz:.0f} N")
+        # External force: purple vertical arrow at the COM, labelled next
+        # to the disk so the value is readable regardless of arrow length.
         if abs(snap.fe) > 1.0:
-            end = QPointF(hip.x(), hip.y() - snap.fe * FE_PX_PER_N)
-            _arrow(painter, hip, end, FE_COLOR)
+            com = self._com_center(hip)
+            end = QPointF(com.x(), com.y() - snap.fe * FE_PX_PER_N)
+            _arrow(painter, com, end, FE_COLOR)
             painter.setPen(QPen(FE_COLOR, 1))
-            painter.drawText(QPointF(end.x() + 8.0, end.y()), f"f_e = {snap.fe:+.0f} N")
+            painter.drawText(QPointF(com.x() + COM_RADIUS + 8.0, com.y() + 4.0), f"f_e = {snap.fe:+.0f} N")

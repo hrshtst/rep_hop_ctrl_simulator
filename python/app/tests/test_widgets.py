@@ -106,11 +106,13 @@ def test_robot_view_drag_emits_vertical_force(qapp):
     def ev(kind, pos, button=Qt.MouseButton.LeftButton):
         return QMouseEvent(kind, pos, button, button, Qt.KeyboardModifier.NoModifier)
 
+    from rhc_demo.robot_view import FE_N_PER_PX
+
     view.mousePressEvent(ev(QMouseEvent.Type.MouseButtonPress, QPointF(200, 300)))
     # Diagonal drag: only the vertical component may matter.
     view.mouseMoveEvent(ev(QMouseEvent.Type.MouseMove, QPointF(150, 250)))
     view.mouseReleaseEvent(ev(QMouseEvent.Type.MouseButtonRelease, QPointF(150, 250)))
-    assert forces[0] == pytest.approx(50 * 3.0)  # 50 px up * 3 N/px
+    assert forces[0] == pytest.approx(50 * FE_N_PER_PX)  # 50 px vertical component
     assert forces[-1] == 0.0
 
 
@@ -129,6 +131,43 @@ def test_phase_view_seed_overlay(qapp):
     view.set_show_seeds(False)
     without_seeds = view.grab().toImage()
     assert with_seeds != without_seeds
+
+
+def test_phase_view_limit_cycle_overlay(qapp):
+    from rhc_demo.phase_view import PhaseView
+    from rhc_demo.state import Snapshot
+
+    view = PhaseView()
+    view.resize(400, 400)
+    view.set_snapshot(Snapshot(z=0.26, vz=0.0, zh=0.26, za=0.28, zb=0.23))
+    without_cycle = view.grab().toImage()
+    theta = np.linspace(0.0, 2 * np.pi, 100)
+    view.set_limit_cycle((0.26 + 0.015 * np.cos(theta), 0.66 * np.sin(theta)))
+    with_cycle = view.grab().toImage()
+    assert with_cycle != without_cycle
+    view.set_limit_cycle(None)
+    assert view.grab().toImage() == without_cycle
+
+
+def test_speed_radios_emit_selected_factor(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+
+    panel = ControlPanel(Params())
+    received = []
+    panel.speedChanged.connect(received.append)
+    panel._speed_buttons[0.5].setChecked(True)
+    panel._speed_buttons[0.25].setChecked(True)
+    assert received == [0.5, 0.25]
+
+
+def test_q_slider_present_below_k(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+
+    panel = ControlPanel(Params())
+    names = list(panel._sliders)
+    assert names.index("q_scale") == names.index("k") + 1
 
 
 def test_fading_trail_is_the_default(qapp):
