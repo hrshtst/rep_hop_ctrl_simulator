@@ -60,16 +60,24 @@ with the paper's default parameters. Drag **ρ̃** from 0 → 1 to morph from
 standing to hopping (the engine slews ρ at a bounded rate, so even a slider
 jump morphs continuously); retarget **z̃_a**, **z̃_m**, **z̃_b** live — the
 sliders enforce `z̃_b < z̃_m < z_h` and `z̃_b < z̃_a` automatically; tune the
-gains **k** and **q** (the natural-frequency scale); click and drag vertically
-inside the robot view to apply an external vertical force f_e (the plant is
-1-DOF, so the horizontal drag component is discarded); toggle the soft-landing
-strategy; slow playback down to 0.75x/0.5x/0.25x; pause/step/reset; and
-**Export CSV** to save the session in the simulator's logger schema for later
-replay or headless rendering (Reset also clears the recorded history, so an
-export contains only the session since the last reset). Whenever the stance
-dynamics has a stable limit cycle (ρ̃ above `exp(-k)`), the phase portrait
-overlays it as a solid black closed loop, traced numerically through the
-bindings (`DynmorphSim.limit_cycle`).
+gains **k** and **q** (the natural-frequency scale); snap any parameter back
+with its per-slider reset button (the ρ̃ button toggles between 0 and 1);
+click and drag vertically inside the robot view to apply an external vertical
+force f_e (the plant is 1-DOF, so the horizontal drag component is discarded);
+toggle the soft-landing strategy; slow playback down to 0.75x/0.5x/0.25x;
+pause/step/reset; and **Export CSV** to save the session in the simulator's
+logger schema for later replay or headless rendering (Reset also clears the
+recorded history, so an export contains only the session since the last
+reset).
+
+Whenever the stance dynamics has a stable limit cycle (ρ̃ above `exp(-k)`),
+the phase portrait overlays the limit-cycle orbits (toggleable from the
+panel): the true limit cycle as a solid blue loop, traced numerically through
+the bindings (`DynmorphSim.limit_cycle`); its full stance ellipse without the
+lift-off cut-off as a dotted blue loop (`DynmorphSim.stance_ellipse`); and,
+while the soft-landing layer is absorbing a boosted apex, the temporarily
+enlarged cushion orbit as a dotted green ellipse (`rhc.stance_ellipse` fed
+with the controller's morphed parameters, per the paper's Fig. 8).
 
 **Replay** accepts any logger-schema CSV — the files produced by the paper
 repository's `graph/make_time_series.sh`, or an exported interactive session.
