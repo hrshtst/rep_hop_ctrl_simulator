@@ -191,11 +191,13 @@ class RobotView(QWidget):
         if snap is None:
             return
         painter.setPen(QPen(LABEL_COLOR, 1))
-        for value, style, label in (
-            (snap.za, Qt.PenStyle.DashLine, "z̃_a"),
-            (snap.zh, Qt.PenStyle.SolidLine, "z_h"),
-            (snap.zm, Qt.PenStyle.DotLine, "z̃_m"),
-            (snap.zb, Qt.PenStyle.DashLine, "z̃_b"),
+        # z_h sits only 5 mm above z̃_m, so its label moves further left
+        # to keep the two from overlapping.
+        for value, style, label, dx in (
+            (snap.za, Qt.PenStyle.DashLine, "z̃_a", 24.0),
+            (snap.zh, Qt.PenStyle.SolidLine, "z_h", 64.0),
+            (snap.zm, Qt.PenStyle.DotLine, "z̃_m", 24.0),
+            (snap.zb, Qt.PenStyle.DashLine, "z̃_b", 24.0),
         ):
             if math.isnan(value):
                 continue
@@ -203,7 +205,7 @@ class RobotView(QWidget):
             painter.setPen(QPen(GUIDE_COLOR, 1, style))
             painter.drawLine(QPointF(MARGIN, y), QPointF(w - MARGIN, y))
             painter.setPen(QPen(LABEL_COLOR, 1))
-            painter.drawText(QPointF(w - MARGIN - 24.0, y - 3.0), label)
+            painter.drawText(QPointF(w - MARGIN - dx, y - 3.0), label)
 
     def _leg_points(self, snap: Snapshot) -> tuple[QPointF, QPointF, QPointF]:
         """Hip, knee and foot positions in pixels; knee bends right.
