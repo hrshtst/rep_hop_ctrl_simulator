@@ -157,6 +157,42 @@ class DynmorphSim {
     return curves;
   }
 
+  // Steady-state orbit geometry of the commanded parameters: the cycle
+  // radius gamma_lc plus the ellipse center/bottom after the
+  // motion-limit / squat branch of ctrl_dynmorph_update_params_default,
+  // with the achieved apex equal to the commanded za. gamma_lc <= 0
+  // means the standing equilibrium is stable and no cycle exists.
+  struct SteadyOrbit {
+    double gamma_lc, zm, zb;
+  };
+  [[nodiscard]] SteadyOrbit steady_orbit() const {
+    SteadyOrbit orbit{ctrl_dynmorph_calc_gamma_lc(cmd_.dynmorph.rho, cmd_.dynmorph.k), cmd_.zm, cmd_.zb};
+    const double zb_kin = ctrl_dynmorph_calc_zb(cmd_.za, cmd_.zh, cmd_.zm);
+    if (cmd_.za > cmd_.zh && cmd_.zb < zb_kin) {
+      orbit.zb = zb_kin;
+    } else {
+      orbit.zm = ctrl_dynmorph_calc_zm(cmd_.za, cmd_.zh, cmd_.zb);
+    }
+    return orbit;
+  }
+
+  // The full stance-phase limit-cycle ellipse of the current parameters
+  // as one closed (z, vz) loop of n points, without the cut-off at the
+  // lift-off height. Empty when no cycle exists (rho <= exp(-k)).
+  [[nodiscard]] Curve stance_ellipse(int n = 181) const {
+    const SteadyOrbit orbit = steady_orbit();
+    Curve c;
+    c.first.resize(static_cast<size_t>(n > 0 ? n : 0));
+    c.second.resize(c.first.size());
+    const int written =
+        ctrl_dynmorph_calc_stance_ellipse(cmd_.zh, orbit.zm, orbit.zb, cmd_.dynmorph.rho, cmd_.dynmorph.k,
+                                          cmd_.dynmorph.q_scale, model_gravity(&model_), n, c.first.data(),
+                                          c.second.data());
+    c.first.resize(written);
+    c.second.resize(written);
+    return c;
+  }
+
   // Trace the steady-state limit cycle of the current parameters as one
   // closed (z, vz) loop. The cycle exists iff the nonlinear damping term
   // has a root gamma_lc > 0 (rho > exp(-k)); otherwise the standing
@@ -169,29 +205,15 @@ class DynmorphSim {
   // included. Safe to call with the GIL released.
   [[nodiscard]] Curve limit_cycle(double settle = 2.0, double dt = 1e-4, int stride = 5) const {
     Curve cyc;
-    const double gamma_lc = ctrl_dynmorph_calc_gamma_lc(cmd_.dynmorph.rho, cmd_.dynmorph.k);
-    if (!(gamma_lc > 0.0)) {
-      return cyc;
-    }
-    // Steady-state orbit center and radius: the motion-limit / squat
-    // branch of ctrl_dynmorph_update_params_default with the achieved
-    // apex equal to the commanded za.
-    double zm_eff = cmd_.zm;
-    double zb_eff = cmd_.zb;
-    const double zb_kin = ctrl_dynmorph_calc_zb(cmd_.za, cmd_.zh, cmd_.zm);
-    if (cmd_.za > cmd_.zh && cmd_.zb < zb_kin) {
-      zb_eff = zb_kin;
-    } else {
-      zm_eff = ctrl_dynmorph_calc_zm(cmd_.za, cmd_.zh, cmd_.zb);
-    }
-    const double r = zm_eff - zb_eff;
-    if (!(r > 0.0)) {
+    const SteadyOrbit orbit = steady_orbit();
+    const double r = orbit.zm - orbit.zb;
+    if (!(orbit.gamma_lc > 0.0) || !(r > 0.0)) {
       return cyc;
     }
     check_step_args(0, dt, stride);
     DynmorphSim tmp(model_mass(&model_), ctrl_dynmorph_type(&ctrl_));
     tmp.cmd_ = cmd_;
-    tmp.reset(zm_eff - gamma_lc * r, 0.0);
+    tmp.reset(orbit.zm - orbit.gamma_lc * r, 0.0);
     const auto n_settle = static_cast<int>(std::llround(settle / dt));
     for (int i = 0; i < n_settle; ++i) {
       tmp.step_once(dt);

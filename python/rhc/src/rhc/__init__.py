@@ -14,6 +14,7 @@ from rhc._rhc import (
     DynmorphType,
     Phase,
     __version__,
+    stance_ellipse,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "DynmorphType",
     "Phase",
     "__version__",
+    "stance_ellipse",
 ]

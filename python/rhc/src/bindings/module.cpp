@@ -85,6 +85,25 @@ PYBIND11_MODULE(_rhc, m) {
   m.doc() = "Python bindings for the rep_hop_ctrl_simulator C library (rhc).";
   m.attr("__version__") = "0.2.0";
 
+  m.def(
+      "stance_ellipse",
+      [](double zh, double zm, double zb, double rho, double k, double q_scale, double g, int n) {
+        std::vector<double> z(static_cast<size_t>(n > 0 ? n : 0));
+        std::vector<double> vz(z.size());
+        const int written =
+            ctrl_dynmorph_calc_stance_ellipse(zh, zm, zb, rho, k, q_scale, g, n, z.data(), vz.data());
+        z.resize(written);
+        vz.resize(written);
+        return py::make_tuple(take(std::move(z)), take(std::move(vz)));
+      },
+      py::arg("zh"), py::arg("zm"), py::arg("zb"), py::arg("rho"), py::arg("k") = 4.0, py::arg("q_scale") = 1.0,
+      py::arg("g") = G, py::arg("n") = 181,
+      "Full stance-phase limit-cycle ellipse gamma = gamma_lc for the given\n"
+      "parameters, as one closed (z, vz) loop without the lift-off cut-off.\n"
+      "Empty arrays when no cycle exists (rho <= exp(-k)). Pure math — pass\n"
+      "the controller's morphed parameters to draw transient orbits such as\n"
+      "the soft-landing cushion ellipse.");
+
   py::enum_<_ctrl_events_phases_t>(m, "Phase", "Controller phase within a hop cycle.")
       .value("INVALID", invalid)
       .value("FALLING", falling)
@@ -151,6 +170,16 @@ PYBIND11_MODULE(_rhc, m) {
           py::arg("region") = py::none(),
           "Phase-portrait solution curves: one (z, vz) array pair per seed. A curve\n"
           "stops early once its state leaves region = (zmin, zmax, vzmin, vzmax).")
+      .def(
+          "stance_ellipse",
+          [](const DynmorphSim &self, int n) {
+            Curve c = self.stance_ellipse(n);
+            return py::make_tuple(take(std::move(c.first)), take(std::move(c.second)));
+          },
+          py::arg("n") = 181,
+          "Full stance-phase limit-cycle ellipse of the current parameters as\n"
+          "one closed (z, vz) loop, without the cut-off at the lift-off height.\n"
+          "Empty arrays when no cycle exists (rho <= exp(-k)).")
       .def(
           "limit_cycle",
           [](const DynmorphSim &self, double settle, double dt, int stride) {

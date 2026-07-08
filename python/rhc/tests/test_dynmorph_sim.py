@@ -219,6 +219,36 @@ def test_limit_cycle_squat_stays_below_zh():
     assert z.min() == pytest.approx(sim.zb, abs=1e-3)
 
 
+def test_stance_ellipse_ignores_liftoff_cutoff():
+    sim = rhc.DynmorphSim()
+    sim.rho = 1.0
+    z, vz = sim.stance_ellipse()
+    assert len(z) == len(vz) == 181
+    assert z[0] == pytest.approx(z[-1])  # closed loop
+    # Nominal design: zb adjusted to 0.24, so the full ellipse spans
+    # zm +/- r = 0.255 +/- 0.015 — its top exceeds zh = 0.26.
+    assert z.max() == pytest.approx(0.27, abs=1e-6)
+    assert z.min() == pytest.approx(0.24, abs=1e-6)
+
+
+def test_stance_ellipse_empty_when_standing():
+    sim = rhc.DynmorphSim()  # rho = 0
+    z, vz = sim.stance_ellipse()
+    assert len(z) == len(vz) == 0
+
+
+def test_module_stance_ellipse_matches_soft_landing_orbit():
+    # Boosted apex 0.35: the cushion orbit keeps zb = 0.23 and raises the
+    # center to zm' = (za' + zb - (za'-zh)^2/(za'-zb)) / 2 (paper Eq. 16).
+    zm_prime = 0.5 * (0.35 + 0.23 - (0.35 - 0.26) ** 2 / (0.35 - 0.23))
+    z, vz = rhc.stance_ellipse(zh=0.26, zm=zm_prime, zb=0.23, rho=1.0, k=4.0)
+    assert z.min() == pytest.approx(0.23, abs=1e-6)
+    assert z.max() == pytest.approx(2 * zm_prime - 0.23, abs=1e-6)
+    assert vz.max() == pytest.approx(-vz.min(), abs=1e-9)
+    zero, _ = rhc.stance_ellipse(zh=0.26, zm=0.255, zb=0.23, rho=0.01)
+    assert len(zero) == 0
+
+
 def test_limit_cycle_leaves_live_state_untouched():
     sim = rhc.DynmorphSim()
     sim.rho = 1.0
