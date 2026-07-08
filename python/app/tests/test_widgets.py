@@ -197,6 +197,25 @@ def test_cushion_ellipse_only_when_apex_boosted(qapp):
     assert MainWindow._cushion_ellipse(Snapshot(**off, p_za=0.35, p_zm=zm_prime)) is None
 
 
+def test_secchi_disk_center_marks_the_com_height(qapp):
+    from rhc_demo.robot_view import COM_OFFSET, RobotView
+    from rhc_demo.state import Snapshot
+
+    view = RobotView(interactive=False)
+    view.resize(500, 700)
+    for z, phase in ((0.2575, 1), (0.30, 0), (0.24, 2)):
+        snap = Snapshot(z=z, vz=0.0, zh=0.26, za=0.28, zm=0.255, zb=0.23, phase=phase)
+        hip, _, foot = view._leg_points(snap)
+        com = view._com_center(hip)
+        # The disk centre is exactly the model state z; the hip joint
+        # hangs COM_OFFSET below it so it stays visible.
+        assert com.y() == pytest.approx(view._y(z))
+        assert hip.y() - com.y() == pytest.approx(COM_OFFSET)
+        # In stance the foot stays anchored on the ground.
+        if phase in (1, 2) and z <= 0.26:
+            assert foot.y() == pytest.approx(view._ground_y())
+
+
 def test_param_reset_buttons(qapp):
     from rhc_demo.control_panel import ControlPanel
     from rhc_demo.params import Params

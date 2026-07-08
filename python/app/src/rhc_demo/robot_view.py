@@ -1,10 +1,11 @@
 """Robot view: 2D schematic of the one-legged robot (paper Fig. 2).
 
 Light gray capsule-shaped links with the knee bending to the right; the
-COM drawn as a red circle with a Secchi-disk pattern, lifted slightly
-off the hip joint so the joint stays visible; the ground reaction force
-as a blue arrow from the contact point; the external force as a purple
-arrow at the COM. The plant is a 1-DOF vertical model, so the external
+COM drawn as a red circle with a Secchi-disk pattern whose centre marks
+the model state z exactly (the hip joint hangs below it on the body, so
+the joint stays visible); the ground reaction force as a blue arrow
+from the contact point; the external force as a purple arrow at the
+COM. The plant is a 1-DOF vertical model, so the external
 force is vertical only: dragging in the view maps the vertical drag
 component to fe (the horizontal component is discarded).
 
@@ -57,7 +58,8 @@ FOOT_WIDTH = 5.0  # px
 JOINT_RADIUS = 7.0
 FOOT_JOINT_RADIUS = 5.0
 COM_RADIUS = 17.0
-# Lift the Secchi disk off the hip so the body-thigh joint stays visible.
+# The hip joint hangs this far below the COM, so the Secchi disk marks
+# the model state z exactly while the body-thigh joint stays visible.
 COM_OFFSET = COM_RADIUS + JOINT_RADIUS + 2.0
 
 ARROW_WIDTH = 4.0
@@ -196,17 +198,25 @@ class RobotView(QWidget):
             painter.drawText(QPointF(w - MARGIN - 24.0, y - 3.0), label)
 
     def _leg_points(self, snap: Snapshot) -> tuple[QPointF, QPointF, QPointF]:
-        """Hip (COM), knee and foot positions in pixels; knee bends right."""
+        """Hip, knee and foot positions in pixels; knee bends right.
+
+        The model state z is the COM height; the hip joint hangs
+        COM_OFFSET below it on the body, so the Secchi disk drawn at
+        the COM stays clear of the joint. The foot is anchored from
+        the COM (reach to the ground in stance, frozen at full reach
+        in flight), leaving its position independent of the offset.
+        """
         cx = self._com_x()
         zh = snap.zh if not math.isnan(snap.zh) else 0.26
         scale = self._scale()
-        hip = QPointF(cx, self._y(snap.z))
-        # Leg reach: to the ground in stance, frozen at full reach in flight.
+        com_y = self._y(snap.z)
+        hip = QPointF(cx, com_y + COM_OFFSET)
         reach = min(snap.z, zh) if snap.contact or snap.z <= zh else zh
-        foot = QPointF(cx, hip.y() + reach * scale)
-        # Two equal links, slightly longer than half the full reach so the
-        # knee keeps a visible bend; perpendicular offset points right.
-        link = 0.505 * zh * scale
+        foot = QPointF(cx, com_y + reach * scale)
+        # Two equal links, slightly longer than half the hip-to-foot
+        # span at full reach so the knee keeps a visible bend;
+        # perpendicular offset points right.
+        link = 0.505 * max(zh * scale - COM_OFFSET, 1.0)
         d = foot.y() - hip.y()
         half = 0.5 * d
         offset = math.sqrt(max(link * link - half * half, 0.0))
@@ -214,7 +224,7 @@ class RobotView(QWidget):
         return hip, knee, foot
 
     def _com_center(self, hip: QPointF) -> QPointF:
-        """Centre of the Secchi disk, lifted off the hip joint."""
+        """Centre of the Secchi disk: exactly the COM height z."""
         return QPointF(hip.x(), hip.y() - COM_OFFSET)
 
     def _draw_robot(self, painter: QPainter, snap: Snapshot) -> None:
@@ -240,7 +250,7 @@ class RobotView(QWidget):
         painter.drawEllipse(foot, FOOT_JOINT_RADIUS, FOOT_JOINT_RADIUS)
 
         # COM: red circle with a Secchi-disk pattern (alternating
-        # quadrants), drawn on the body just above the hip joint.
+        # quadrants), centred exactly on the model state z.
         com = self._com_center(hip)
         painter.setPen(QPen(COM_RED.darker(130), 1.5))
         painter.setBrush(QBrush(COM_WHITE))
