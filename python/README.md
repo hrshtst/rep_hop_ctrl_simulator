@@ -51,12 +51,16 @@ The application has three execution modes:
 
 ```sh
 uv run rhc-demo                                  # interactive live simulation
+uv run rhc-demo interactive --rho 1 --za 0.32    # start already hopping
 uv run rhc-demo replay data.csv [--speed 1.5]    # replay a recorded time series
 uv run rhc-demo headless data.csv -o out/ --mp4 --gif   # offscreen frames + video
 ```
 
 **Interactive** starts from the paper's stand start `(z, ż) = ((z_h+z_m)/2, 0)`
-with the paper's default parameters. Drag **ρ̃** from 0 → 1 to morph from
+with the paper's default parameters; `--rho/--za/--zm/--zb/--k/--q` override
+the initial slider values (out-of-range values are clipped to the slider
+limits and the kinematic constraints `z̃_b < z̃_m < z_h`, `z̃_b < z̃_a` are
+re-enforced, each with a warning on stderr). Drag **ρ̃** from 0 → 1 to morph from
 standing to hopping (the engine slews ρ at a bounded rate, so even a slider
 jump morphs continuously); retarget **z̃_a**, **z̃_m**, **z̃_b** live — the
 sliders enforce `z̃_b < z̃_m < z_h` and `z̃_b < z̃_a` automatically; tune the

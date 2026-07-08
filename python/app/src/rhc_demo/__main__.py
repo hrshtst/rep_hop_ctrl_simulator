@@ -6,6 +6,7 @@ Interactive live simulation (default)::
 
     rhc-demo
     rhc-demo interactive
+    rhc-demo interactive --rho 1 --za 0.32   # start hopping toward 0.32 m
 
 Replay a time-series CSV (e.g. from graph/make_time_series.sh)::
 
@@ -33,6 +34,18 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="mode")
 
     interactive = sub.add_parser("interactive", help="live simulation window (default)")
+    initial = interactive.add_argument_group(
+        "initial control parameters",
+        "Starting slider values. Out-of-range values are clipped to the "
+        "slider limits, and the kinematic constraints (z̃_b < z̃_m < z_h, "
+        "z̃_b < z̃_a) are enforced, both with a warning.",
+    )
+    initial.add_argument("--rho", type=float, help="morphing parameter ρ̃ (0: stand, 1: hop)")
+    initial.add_argument("--za", type=float, metavar="M", help="target apex height z̃_a [m]")
+    initial.add_argument("--zm", type=float, metavar="M", help="standing height z̃_m [m]")
+    initial.add_argument("--zb", type=float, metavar="M", help="kinematic lower limit z̃_b [m]")
+    initial.add_argument("--k", type=float, help="convergence gain k")
+    initial.add_argument("--q", dest="q_scale", type=float, help="natural-frequency scale q")
 
     replay = sub.add_parser("replay", help="replay a recorded time-series CSV")
     replay.add_argument("csv", type=Path, help="logger-schema CSV file")
@@ -71,12 +84,21 @@ def _run_gui(window_factory) -> int:
     return app.exec()
 
 
-def _main_interactive(*, show_seeds: bool = False) -> int:
+PARAM_OPTIONS = ("rho", "za", "zm", "zb", "k", "q_scale")
+
+
+def _main_interactive(*, show_seeds: bool = False, overrides: dict[str, float | None] | None = None) -> int:
+    from rhc_demo.params import initial_params
+
+    params, warnings = initial_params(overrides or {})
+    for message in warnings:
+        print(f"warning: {message}", file=sys.stderr)
+
     def factory() -> MainWindow:
         from rhc_demo.engine import LiveEngine
         from rhc_demo.main_window import MainWindow
 
-        return MainWindow(LiveEngine(), show_seeds=show_seeds)
+        return MainWindow(LiveEngine(params), show_seeds=show_seeds)
 
     return _run_gui(factory)
 
@@ -140,8 +162,11 @@ def main(argv: list[str] | None = None) -> int:
         return _main_replay(args.csv, args.speed, show_seeds=args.show_seeds)
     if args.mode == "headless":
         return _main_headless(args)
-    # Bare invocation has no subcommand namespace, hence the getattr default.
-    return _main_interactive(show_seeds=getattr(args, "show_seeds", False))
+    # Bare invocation has no subcommand namespace, hence the getattr defaults.
+    return _main_interactive(
+        show_seeds=getattr(args, "show_seeds", False),
+        overrides={name: getattr(args, name, None) for name in PARAM_OPTIONS},
+    )
 
 
 if __name__ == "__main__":
