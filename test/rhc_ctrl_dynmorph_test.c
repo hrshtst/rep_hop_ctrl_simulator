@@ -256,6 +256,47 @@ TEST(test_ctrl_dynmorph_calc_gamma_lc)
   ASSERT_TRUE( ctrl_dynmorph_calc_gamma_lc( 0.0, 4.0 ) < 0.0 );
 }
 
+TEST(test_ctrl_dynmorph_calc_stance_ellipse)
+{
+  double z[181], vz[181];
+  double zh = 0.26, zm = 0.255, zb = 0.24;
+  double r, vm, zmax, zmin, vmax;
+  int n, i;
+
+  /* rho = 1: the designed orbit, gamma_lc = 1 */
+  n = ctrl_dynmorph_calc_stance_ellipse( zh, zm, zb, 1.0, 4.0, 1.0, G, 181, z, vz );
+  ASSERT_EQ( 181, n );
+  ASSERT_NEAR( z[0], z[n-1], 1e-10 );   /* closed loop */
+  ASSERT_NEAR( vz[0], vz[n-1], 1e-10 );
+  r = zm - zb;
+  vm = ctrl_dynmorph_calc_q1( zh, zm, G ) * r;
+  zmax = zmin = z[0];
+  vmax = vz[0];
+  for( i=0; i<n; i++ ){
+    zmax = max( zmax, z[i] );
+    zmin = min( zmin, z[i] );
+    vmax = max( vmax, vz[i] );
+    /* every point satisfies the ellipse equation gamma = 1 */
+    ASSERT_NEAR( 1.0, sqr( ( z[i] - zm ) / r ) + sqr( vz[i] / vm ), 1e-10 );
+  }
+  ASSERT_NEAR( zm + r, zmax, 1e-4 );
+  ASSERT_NEAR( zm - r, zmin, 1e-4 );
+  ASSERT_NEAR( vm, vmax, 1e-4 );
+
+  /* q_scale stretches the velocity semi-axis only */
+  n = ctrl_dynmorph_calc_stance_ellipse( zh, zm, zb, 1.0, 4.0, 2.0, G, 181, z, vz );
+  vmax = vz[0];
+  for( i=0; i<n; i++ )
+    vmax = max( vmax, vz[i] );
+  ASSERT_NEAR( 2.0 * vm, vmax, 1e-4 );
+
+  /* no cycle below the bifurcation, degenerate geometry rejected */
+  ASSERT_EQ( 0, ctrl_dynmorph_calc_stance_ellipse( zh, zm, zb, 0.0, 4.0, 1.0, G, 181, z, vz ) );
+  ASSERT_EQ( 0, ctrl_dynmorph_calc_stance_ellipse( zh, zm, zb, 0.01, 4.0, 1.0, G, 181, z, vz ) );
+  ASSERT_EQ( 0, ctrl_dynmorph_calc_stance_ellipse( zh, zm, zm, 1.0, 4.0, 1.0, G, 181, z, vz ) );
+  ASSERT_EQ( 0, ctrl_dynmorph_calc_stance_ellipse( zm, zm, zb, 1.0, 4.0, 1.0, G, 181, z, vz ) );
+}
+
 TEST(test_ctrl_dynmorph_calc_za)
 {
   struct case_t {
@@ -538,6 +579,7 @@ TEST_SUITE(test_ctrl_dynmorph)
   RUN_TEST(test_ctrl_dynmorph_calc_sqr_vm);
   RUN_TEST(test_ctrl_dynmorph_calc_sqr_gamma);
   RUN_TEST(test_ctrl_dynmorph_calc_gamma_lc);
+  RUN_TEST(test_ctrl_dynmorph_calc_stance_ellipse);
   RUN_TEST(test_ctrl_dynmorph_calc_za);
   RUN_TEST(test_ctrl_dynmorph_calc_zh);
   RUN_TEST(test_ctrl_dynmorph_calc_zm);

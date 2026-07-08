@@ -136,6 +136,32 @@ double ctrl_dynmorph_calc_gamma_lc(double rho, double k)
   return 1.0 + log( rho ) / k;
 }
 
+/* Sample the full stance-phase limit-cycle ellipse gamma = gamma_lc as
+   one closed loop of n points, without the cut-off at the lift-off
+   height. The ellipse is centered at (zm, 0) with semi-axes
+   gamma_lc * r along z and gamma_lc * vm along the velocity axis,
+   where r = zm - zb and vm = q1 * r. Fills z[] and vz[] (each of
+   capacity n, first point repeated at the end) and returns the number
+   of points written; 0 when no limit cycle exists or the geometry is
+   degenerate. */
+int ctrl_dynmorph_calc_stance_ellipse(double zh, double zm, double zb, double rho, double k, double q_scale, double g, int n, double *z, double *vz)
+{
+  double gamma_lc, r, vm, theta;
+  int i;
+
+  gamma_lc = ctrl_dynmorph_calc_gamma_lc( rho, k );
+  r = zm - zb;
+  if( !( gamma_lc > 0.0 ) || !( r > 0.0 ) || !( zh > zm ) || n < 2 )
+    return 0;
+  vm = ctrl_dynmorph_calc_q1( zh, zm, g ) * q_scale * r;
+  for( i=0; i<n; i++ ){
+    theta = 2.0 * PI * i / ( n - 1 );
+    z[i] = zm + gamma_lc * r * cos( theta );
+    vz[i] = gamma_lc * vm * sin( theta );
+  }
+  return n;
+}
+
 double ctrl_dynmorph_calc_za(double zh, double zm, double zb)
 {
   return 0.5 * ( ( zm - zb ) * ( zm - zb ) / ( zh - zm ) + zh + zm );

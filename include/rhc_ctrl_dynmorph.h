@@ -56,6 +56,7 @@ double ctrl_dynmorph_calc_sqr_vm(double zh, double zm, double zb, double g);
 double ctrl_dynmorph_calc_sqr_gamma(vec_t p, double zh, double zm, double zb, double g);
 #define ctrl_dynmorph_calc_gamma(p,zh,zm,zb,g) sqrt( ctrl_dynmorph_calc_sqr_gamma( p, zh, zm, zb, g ) )
 double ctrl_dynmorph_calc_gamma_lc(double rho, double k);
+int ctrl_dynmorph_calc_stance_ellipse(double zh, double zm, double zb, double rho, double k, double q_scale, double g, int n, double *z, double *vz);
 double ctrl_dynmorph_calc_za(double zh, double zm, double zb);
 double ctrl_dynmorph_calc_zh(double za, double zm, double zb);
 double ctrl_dynmorph_calc_zm(double za, double zh, double zb);
