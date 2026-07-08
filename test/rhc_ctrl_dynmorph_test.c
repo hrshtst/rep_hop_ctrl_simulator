@@ -231,6 +231,31 @@ TEST(test_ctrl_dynmorph_calc_sqr_gamma)
   }
 }
 
+TEST(test_ctrl_dynmorph_calc_gamma_lc)
+{
+  struct case_t {
+    double rho, k;
+    double expected;
+  } cases[] = {
+    { 1.0, 4.0, 1.0, },              /* full oscillator: the designed orbit */
+    { exp(-2.0), 4.0, 0.5, },        /* shrunken cycle */
+    { exp(-1.0), 2.0, 0.5, },
+    { 0.5, 4.0, 1.0+log(0.5)/4.0, },
+    { 0.0, 0.0, 0.0, },
+  };
+  struct case_t *c;
+  double gamma_lc;
+
+  for( c=cases; c->expected>0; c++ ){
+    gamma_lc = ctrl_dynmorph_calc_gamma_lc( c->rho, c->k );
+    ASSERT_NEAR( c->expected, gamma_lc, 1e-10 );
+  }
+  /* at and below rho = exp(-k) the equilibrium is stable: no cycle */
+  ASSERT_NEAR( 0.0, ctrl_dynmorph_calc_gamma_lc( exp(-4.0), 4.0 ), 1e-10 );
+  ASSERT_TRUE( ctrl_dynmorph_calc_gamma_lc( 0.01, 4.0 ) < 0.0 );
+  ASSERT_TRUE( ctrl_dynmorph_calc_gamma_lc( 0.0, 4.0 ) < 0.0 );
+}
+
 TEST(test_ctrl_dynmorph_calc_za)
 {
   struct case_t {
@@ -512,6 +537,7 @@ TEST_SUITE(test_ctrl_dynmorph)
   RUN_TEST(test_ctrl_dynmorph_calc_r);
   RUN_TEST(test_ctrl_dynmorph_calc_sqr_vm);
   RUN_TEST(test_ctrl_dynmorph_calc_sqr_gamma);
+  RUN_TEST(test_ctrl_dynmorph_calc_gamma_lc);
   RUN_TEST(test_ctrl_dynmorph_calc_za);
   RUN_TEST(test_ctrl_dynmorph_calc_zh);
   RUN_TEST(test_ctrl_dynmorph_calc_zm);

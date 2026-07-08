@@ -55,6 +55,7 @@ double ctrl_dynmorph_calc_sqr_vm(double zh, double zm, double zb, double g);
 #define ctrl_dynmorph_calc_vm(zh,zm,zb,g) sqrt( ctrl_dynmorph_calc_sqr_vm( zh, zm, zb, g ) )
 double ctrl_dynmorph_calc_sqr_gamma(vec_t p, double zh, double zm, double zb, double g);
 #define ctrl_dynmorph_calc_gamma(p,zh,zm,zb,g) sqrt( ctrl_dynmorph_calc_sqr_gamma( p, zh, zm, zb, g ) )
+double ctrl_dynmorph_calc_gamma_lc(double rho, double k);
 double ctrl_dynmorph_calc_za(double zh, double zm, double zb);
 double ctrl_dynmorph_calc_zh(double za, double zm, double zb);
 double ctrl_dynmorph_calc_zm(double za, double zh, double zb);

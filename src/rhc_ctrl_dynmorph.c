@@ -125,6 +125,17 @@ double ctrl_dynmorph_calc_sqr_gamma(vec_t p, double zh, double zm, double zb, do
   return ( z - zm ) * ( z - zm ) / sqr_r + v * v / sqr_vm;
 }
 
+/* Radius (in gamma) of the stance-phase limit cycle, i.e. the root of
+   the nonlinear damping term h(gamma) = 1 - rho * exp( k ( 1 - gamma ) ).
+   A non-positive value means the equilibrium (zm, 0) is stable and no
+   limit cycle exists; the cycle appears when rho > exp( -k ). */
+double ctrl_dynmorph_calc_gamma_lc(double rho, double k)
+{
+  if( rho <= 0.0 || k <= 0.0 )
+    return -HUGE_VAL;
+  return 1.0 + log( rho ) / k;
+}
+
 double ctrl_dynmorph_calc_za(double zh, double zm, double zb)
 {
   return 0.5 * ( ( zm - zb ) * ( zm - zb ) / ( zh - zm ) + zh + zm );
