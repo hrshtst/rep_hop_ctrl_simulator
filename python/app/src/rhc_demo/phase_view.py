@@ -5,9 +5,10 @@ vz = 0; thin gray solution curves; the limit-cycle orbits drawn over
 them (bottom to top: the soft-landing cushion ellipse in dotted green,
 the full stance ellipse in dotted blue, the true limit cycle in solid
 blue), toggleable from the control panel; dotted boundary lines at the
-target apex (za) and the kinematic lower limit (zb); the current COM
-state as a solid red circle; and a COM history that can be toggled
-between a continuous line and a fading trail of recent states.
+target apex (za), the standing height (zm), and the kinematic lower
+limit (zb); the current COM state as a solid red circle; and a COM
+history that can be toggled between a continuous line and a fading
+trail of recent states.
 
 For debugging the curve family, the initial seeds of the solution
 curves can be overlaid as black circles (``show_seeds``; enabled with
@@ -186,10 +187,11 @@ class PhaseView(QWidget):
         if snap is not None and not math.isnan(snap.zh):
             painter.drawLine(QPointF(snap.zh, PHASE_VZ_RANGE[0]), QPointF(snap.zh, PHASE_VZ_RANGE[1]))
 
-        # Dotted boundaries: target apex za and kinematic lower limit zb.
+        # Dotted boundaries: target apex za, standing height zm, and the
+        # kinematic lower limit zb.
         if snap is not None:
             painter.setPen(_cosmetic_pen(BOUNDARY_COLOR, 1.0, Qt.PenStyle.DotLine))
-            for value in (snap.za, snap.zb):
+            for value in (snap.za, snap.zm, snap.zb):
                 if not math.isnan(value):
                     painter.drawLine(QPointF(value, PHASE_VZ_RANGE[0]), QPointF(value, PHASE_VZ_RANGE[1]))
 
@@ -219,7 +221,13 @@ class PhaseView(QWidget):
         # Guide labels, drawn in pixel space for legible text.
         painter.setPen(QPen(LABEL_COLOR, 1))
         if snap is not None:
-            for value, label, dy in ((snap.zh, "z_h", 12.0), (snap.za, "z̃_a", 24.0), (snap.zb, "z̃_b", 24.0)):
+            # zm sits close to zh, so its label gets its own row.
+            for value, label, dy in (
+                (snap.zh, "z_h", 12.0),
+                (snap.za, "z̃_a", 24.0),
+                (snap.zb, "z̃_b", 24.0),
+                (snap.zm, "z̃_m", 36.0),
+            ):
                 if not math.isnan(value):
                     top = tr.map(QPointF(value, PHASE_VZ_RANGE[1]))
                     painter.drawText(QPointF(top.x() + 3.0, top.y() + dy), label)
