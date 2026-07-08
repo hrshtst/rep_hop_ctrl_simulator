@@ -67,17 +67,25 @@ ARROW_HEAD = 15.0
 
 
 def _arrow(painter: QPainter, start: QPointF, end: QPointF, color: QColor, width: float = ARROW_WIDTH) -> None:
-    """Draw a line with a filled arrowhead at ``end``."""
+    """Draw an arrow whose head tip lies exactly at ``end``.
+
+    The shaft stops at the head's base: drawn through to the tip it
+    would poke out of the triangle, which tapers below the stroke
+    width near the tip (and the square line cap would overshoot it).
+    Arrows shorter than the nominal head shrink to head-only.
+    """
     dx, dy = end.x() - start.x(), end.y() - start.y()
     length = math.hypot(dx, dy)
     if length < 1.0:
         return
-    painter.setPen(QPen(color, width))
-    painter.drawLine(start, end)
     ux, uy = dx / length, dy / length
-    head = ARROW_HEAD
-    left = QPointF(end.x() - head * ux + head * 0.5 * uy, end.y() - head * uy - head * 0.5 * ux)
-    right = QPointF(end.x() - head * ux - head * 0.5 * uy, end.y() - head * uy + head * 0.5 * ux)
+    head = min(ARROW_HEAD, length)
+    base = QPointF(end.x() - head * ux, end.y() - head * uy)
+    left = QPointF(base.x() + head * 0.5 * uy, base.y() - head * 0.5 * ux)
+    right = QPointF(base.x() - head * 0.5 * uy, base.y() + head * 0.5 * ux)
+    if length > head:
+        painter.setPen(QPen(color, width))
+        painter.drawLine(start, base)
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(QBrush(color))
     painter.drawPolygon(QPolygonF([end, left, right]))

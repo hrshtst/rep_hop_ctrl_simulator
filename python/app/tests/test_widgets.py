@@ -197,6 +197,32 @@ def test_cushion_ellipse_only_when_apex_boosted(qapp):
     assert MainWindow._cushion_ellipse(Snapshot(**off, p_za=0.35, p_zm=zm_prime)) is None
 
 
+def test_arrow_shaft_does_not_protrude_past_head(qapp):
+    from PyQt6.QtCore import QPointF
+    from PyQt6.QtGui import QColor, QImage, QPainter
+
+    from rhc_demo.robot_view import _arrow
+
+    img = QImage(100, 100, QImage.Format.Format_RGB32)
+    img.fill(QColor("#ffffff"))
+    painter = QPainter(img)  # no antialiasing: crisp pixels to assert on
+    _arrow(painter, QPointF(50, 80), QPointF(50, 20), QColor("#ff0000"))
+    painter.end()
+    white = QColor("#ffffff").rgb()
+    # Nothing beyond the head tip (the square-capped shaft used to
+    # overshoot it by half the stroke width).
+    for y in (17, 18, 19):
+        for x in range(44, 57):
+            assert img.pixel(x, y) == white, f"pixel above the tip at ({x}, {y})"
+    # Nothing beside the head where the triangle tapers below the
+    # shaft width (the full-length shaft used to flank it).
+    assert img.pixel(48, 22) == white
+    assert img.pixel(51, 22) == white
+    # The head itself and the shaft below its base are drawn.
+    assert img.pixel(50, 22) != white
+    assert img.pixel(50, 60) != white
+
+
 def test_secchi_disk_center_marks_the_com_height(qapp):
     from rhc_demo.robot_view import COM_OFFSET, RobotView
     from rhc_demo.state import Snapshot
