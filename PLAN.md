@@ -106,3 +106,45 @@ Proposed GUI design modifications for the Python demo application, Dynamics Morp
 * Add a grouped set of radio buttons to enable slow-motion playback.
   * Allow users to select between **1.0x**, **0.75x**, **0.5x**, and **0.25x** playback speeds.
 * In Interactive Mode, data intended for export is held in memory. Ensure that this memory is freed when the **Reset** button is pressed. In other words, the exported data should only contain the session history recorded *after* the most recent reset.
+
+---
+
+## Frontend Design Modifications (Round 2)
+
+### 1. General Layout and Window Dimensions
+
+* **Vertical Spacing:** The current layout packs the sliders too densely, obscuring their labels. Increase the overall height of the application window to provide more vertical padding. It is not necessary to maintain the exact previous aspect ratio; simply choose rounded integer values for the window's width and height that look balanced.
+* **Panel Proportions:** Increase the width of the Control Panel to accommodate new UI elements. Aim for an approximate width ratio of **7:5:4** or **8:5:5** across the three main panes (Phase Portrait : Robot View : Control Panel).
+
+### 2. Phase Portrait View
+
+* **Limit Cycle Verification:** Please cross-reference the exact mathematical condition for the limit cycle emergence with our local manuscript ( @/home/atsuta/Dropbox/work/publication/journal/rep_hop_ctrl/sn-article_v1.3.0.pdf ).
+* **Additional Orbit Visualizations:** To better aid user understanding, we need to draw auxiliary reference limit-cycle curves alongside the primary limit cycle:
+  * **Full Stance Ellipse:** The limit cycle during the stance phase (an ellipse) is cut off during the aerial phase and connected to a parabola. Draw the complete, continuous ellipse as an auxiliary curve without this cutoff.
+  * **Soft Landing Ellipse:** When a disturbance causes the COM to land from a higher apex than expected, the soft landing mechanism absorbs the impact by enlarging the limit cycle during the compression phase (from touchdown to bottom). Draw this enlarged full ellipse to visually explain the soft landing mechanism. (This ellipse does not need to connect to an aerial parabola).
+  * Compute these additional orbits in the backend likely as the previous work.
+* **Color and Line Style Specifications:**
+  * **True Limit Cycle:** Update the current black solid line to a **solid blue** line of the same width.
+  * **Full Stance Ellipse (Auxiliary):** Draw this as a **dotted blue** line with the same width as the true limit cycle.
+  * **Soft Landing Ellipse (Auxiliary):** When the soft landing mode is active and the temporarily enlarged limit cycle is computed, draw it as a **dotted green** line (full ellipse) with the same width as the others.
+  * Drawing order (from bottom to top): Solution curves -> Soft Landing Ellipse -> Full Stance Ellipse -> True Limit Cycle
+
+### 3. Robot View
+
+* **Height Parameter Lines:**
+  * $z_h$: Update the visual representation from a dashed/dotted line to a **solid** line.
+  * $\tilde{z}_m$: Add a new horizontal line representing $z = \tilde{z}_m$. Render this using the previous dotted line style originally used for $z_h$.
+
+* **Link Adjustments:**
+  * **Body Link:** Reduce the corner radius of the rounded rectangle so it appears more like a standard rectangle with slightly softened edges.
+  * **Foot Link & Joint:** Revert the foot link and its connecting joint to their previous design iterations. The foot should be a simple thick line, and its joint should be scaled down. The thigh and shank links must remain as the newly updated rounded rectangles.
+
+### 4. Control Panel
+
+* **Limit Cycle Toggle:** Add a UI toggle (a checkbox) to show or hide the limit cycle plots in the Phase Portrait View. This should be **enabled** by default.
+* **Slider Constraint Updates:**
+  * $\tilde{z}_a$: Set the maximum upper limit to **0.43**.
+  * $\tilde{z}_b$: Set the minimum lower limit to **0.15**.
+* **Parameter Reset Buttons:** * Add a dedicated "Reset" button adjacent to each parameter slider to easily visually link the button to its respective control.
+  * **Special Logic for $\tilde{\rho}$:** The reset button for $\tilde{\rho}$ should act as a toggle between the two extremes. If $\tilde{\rho} = 0$, clicking reset should snap the value to $1$. If $\tilde{\rho} > 0$, clicking reset should snap the value to $0$.
+  * *Note:* Ensure the overall width of the Control Panel is increased (as noted in the General section) if these new buttons make the slider layout too cramped.
