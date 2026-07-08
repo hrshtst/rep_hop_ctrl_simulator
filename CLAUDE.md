@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A simulator for **repetitive hopping control**: a small C library (`include/rhc_*.h`, `src/rhc_*.c`) implementing hopping dynamics (e.g. SLIP) and a set of controllers (`rhc_ctrl_*` — Raibert, regulator, MTOKA oscillator, SLIP variable-stiffness, dynmorph, etc.). `example/` holds demo programs that run a controller and write CSV; `example/graph_plot/` holds Python scripts that plot the CSV. Python is **only** for plotting.
+A simulator for **repetitive hopping control**: a small C library (`include/rhc_*.h`, `src/rhc_*.c`) implementing hopping dynamics (e.g. SLIP) and a set of controllers (`rhc_ctrl_*` — Raibert, regulator, MTOKA oscillator, SLIP variable-stiffness, dynmorph, etc.). `example/` holds demo programs that run a controller and write CSV; `example/graph_plot/` holds Python scripts that plot the CSV. `python/` holds Python bindings of the C library plus a PyQt6 demo app.
 
 ## Build & test
 
@@ -29,3 +29,9 @@ A simulator for **repetitive hopping control**: a small C library (`include/rhc_
 
 - Managed with `uv`. Lint/format with `ruff` (config in `pyproject.toml`: line length 120, double quotes, `select = ["ALL"]`, numpy-style docstrings).
 - Convenience workflow: `example/run_example.sh <program>` builds, runs the example, and plots its CSV using the matching `<program>.py`. See `/run-sim`.
+
+## Python bindings & demo app (`python/`)
+
+- A `uv` workspace with two packages: `rhc/` (pybind11 bindings that compile `src/*.c` directly into the extension; single facade `rhc.DynmorphSim`) and `app/` (`rhc-demo`, a PyQt6 demo of the paper's controller). See `python/README.md`.
+- Setup/build: `cd python && uv sync`. Run: `uv run rhc-demo` (also `replay`/`headless` modes). Test: `uv run pytest`. Lint: `uv run ruff check .` (own config in `python/pyproject.toml`; distinct from `example/graph_plot`'s).
+- **Gotcha: editing the C library (`src/`, `include/`) or `rhc/src/bindings/` does NOT rebuild the cached extension** — force it with `uv sync --reinstall-package rhc`. Pure-Python edits are editable installs and need no rebuild.
