@@ -92,6 +92,9 @@ sequence, then optionally encodes MP4/GIF with the ffmpeg binary bundled by
 `imageio-ffmpeg`. `--speed` sets the playback speed baked into the video
 (`--speed 0.5` renders half-speed slow motion with twice the frames); the
 in-app playback-speed radios are therefore not rendered in headless frames.
+Apart from that, headless frames keep the interactive appearance — the
+parameter widgets stay enabled (mirroring the logged values) rather than
+graying out as in replay mode, so videos look like a live session.
 
 Qt platform is auto-detected (native Wayland on GNOME, WSLg, or X11); set
 `QT_QPA_PLATFORM` explicitly only to override.

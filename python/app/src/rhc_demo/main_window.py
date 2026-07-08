@@ -10,6 +10,7 @@ by the frame timer — the GUI thread never blocks on simulation work.
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QTimer
@@ -54,12 +55,14 @@ class MainWindow(QMainWindow):
         title_mode = "interactive" if self.interactive else "replay"
         self.setWindowTitle(f"Dynamics Morphing — standing ↔ hopping ({title_mode})")
 
+        self._headless = headless
         params = source.params if self.interactive else Params()
         self.phase_view = PhaseView(show_seeds=show_seeds)
         self.robot_view = RobotView(interactive=self.interactive)
-        # Headless renders at a speed fixed by the CLI; hide the
-        # never-changing playback-speed radios from the frames.
-        self.panel = ControlPanel(params, interactive=self.interactive, show_speed=not headless)
+        # Headless drives a replay source, but its frames must look like
+        # the interactive window: no playback-speed radios (the CLI fixes
+        # the speed) and no grayed-out replay widgets.
+        self.panel = ControlPanel(params, interactive=self.interactive, headless=headless)
         # The phase portrait gets the widest pane so it renders close to
         # a square; its z-range upper limit is widened to match. The
         # panel's share fits the per-slider reset buttons.
@@ -122,7 +125,12 @@ class MainWindow(QMainWindow):
         self.phase_view.set_snapshot(snap)
         self.phase_view.set_cushion_ellipse(self._cushion_ellipse(snap))
         self.robot_view.set_snapshot(snap)
-        self.panel.update_readout(snap)
+        if self._headless:
+            # Frames are seeked from a paused source, but the video plays
+            # continuously: show the readout an interactive user would see.
+            self.panel.update_readout(replace(snap, playing=True, finished=False))
+        else:
+            self.panel.update_readout(snap)
         if not self.interactive:
             self.panel.reflect_snapshot(snap)
             self._maybe_refresh_replay_curves(snap)

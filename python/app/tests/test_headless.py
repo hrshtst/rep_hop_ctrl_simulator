@@ -60,3 +60,34 @@ def test_headless_window_hides_playback_speed_radios(qapp, data):
     window._timer.stop()
     assert not hasattr(window.panel, "_speed_buttons")
     window.close()
+
+
+def test_headless_frames_keep_the_interactive_look(qapp, data):
+    from PyQt6.QtWidgets import QPushButton
+
+    from rhc_demo.main_window import MainWindow
+
+    window = MainWindow(ReplaySource(data), headless=True)
+    window._timer.stop()
+    panel = window.panel
+    # Unlike replay mode, nothing is grayed out...
+    assert panel._soft_landing.isEnabled()
+    assert all(s._slider.isEnabled() for s in panel._sliders.values())
+    # ...the Export button is present like in interactive mode...
+    labels = [b.text() for b in panel.findChildren(QPushButton)]
+    assert "Export CSV…" in labels
+    # ...and the readout reads as a running session, not a paused replay.
+    window.source.set_paused(True)
+    window.source.seek_time(0.1)
+    window.render_frame()
+    assert "running" in panel._readout.text()
+    window.close()
+
+
+def test_replay_window_still_grays_parameters(qapp, data):
+    from rhc_demo.main_window import MainWindow
+
+    window = MainWindow(ReplaySource(data))
+    window._timer.stop()
+    assert not window.panel._soft_landing.isEnabled()
+    window.close()

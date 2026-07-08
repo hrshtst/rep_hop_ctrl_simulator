@@ -7,7 +7,10 @@ constraints ``zb < zm < zh`` and ``zb < za`` are never violated. zh is
 a fixed robot constant and is displayed, not adjustable. Execution
 controls (pause, reset, step) and the playback-speed radio buttons work
 in both replay and interactive modes; in replay mode the parameter
-widgets are disabled and mirror the logged values.
+widgets are disabled and mirror the logged values. Headless mode also
+mirrors the log but keeps every widget looking interactive (and drops
+the playback-speed radios, which the CLI fixes), so rendered videos
+show exactly what an interactive user would see.
 """
 
 from __future__ import annotations
@@ -135,16 +138,17 @@ class ControlPanel(QWidget):
     exportRequested = pyqtSignal()
     speedChanged = pyqtSignal(float)
 
-    def __init__(self, params: Params, *, interactive: bool = True, show_speed: bool = True) -> None:
+    def __init__(self, params: Params, *, interactive: bool = True, headless: bool = False) -> None:
         super().__init__()
         self.params = params
         self._interactive = interactive
+        self._headless = headless
         self.setMinimumWidth(280)
 
         root = QVBoxLayout()
         root.addWidget(self._make_param_group(params))
         root.addWidget(self._make_toggle_group(params))
-        if show_speed:
+        if not headless:
             # Headless rendering fixes the playback speed on the command
             # line (--speed), so the radio group would be dead weight.
             root.addWidget(self._make_speed_group())
@@ -156,7 +160,10 @@ class ControlPanel(QWidget):
         root.addStretch(1)
         self.setLayout(root)
 
-        if not interactive:
+        # Replay grays the parameter widgets out; headless keeps the
+        # interactive look so rendered videos show exactly what an
+        # interactive user sees (values still mirror the log).
+        if not interactive and not headless:
             self.set_parameters_enabled(False)
 
     # -- construction ---------------------------------------------------------
@@ -280,7 +287,9 @@ class ControlPanel(QWidget):
         self._reset_btn = QPushButton("Reset")
         self._reset_btn.clicked.connect(self.resetRequested.emit)
         actions.addWidget(self._reset_btn)
-        if self._interactive:
+        if self._interactive or self._headless:
+            # Present in headless frames too, purely to mirror the
+            # interactive layout (nothing can click it offscreen).
             export_btn = QPushButton("Export CSV…")
             export_btn.clicked.connect(self.exportRequested.emit)
             actions.addWidget(export_btn)
