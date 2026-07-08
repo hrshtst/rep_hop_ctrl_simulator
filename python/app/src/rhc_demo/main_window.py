@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QMainWindow, QWidget
 
+import rhc
 from rhc_demo.control_panel import ControlPanel
 from rhc_demo.curves import CurveWorker
 from rhc_demo.engine import LiveEngine
@@ -23,6 +24,8 @@ from rhc_demo.phase_view import PhaseView
 from rhc_demo.robot_view import RobotView
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from rhc_demo.replay import ReplaySource
     from rhc_demo.state import Snapshot
 
@@ -30,6 +33,9 @@ FRAME_MS = 16
 CURVE_DEBOUNCE_MS = 150
 # Recompute replay curves when logged guides move by more than this.
 CURVE_PARAM_TOL = 1e-4
+# Apex boost (m) beyond the commanded za before the transient
+# soft-landing cushion ellipse is drawn; filters steady-state jitter.
+CUSHION_TOL = 1e-3
 
 
 class MainWindow(QMainWindow):
@@ -47,11 +53,12 @@ class MainWindow(QMainWindow):
         self.robot_view = RobotView(interactive=self.interactive)
         self.panel = ControlPanel(params, interactive=self.interactive)
         # The phase portrait gets the widest pane so it renders close to
-        # a square; its z-range upper limit is widened to match.
+        # a square; its z-range upper limit is widened to match. The
+        # panel's share fits the per-slider reset buttons.
         root = QHBoxLayout()
         root.addWidget(self.phase_view, 7)
         root.addWidget(self.robot_view, 5)
-        root.addWidget(self.panel, 3)
+        root.addWidget(self.panel, 4)
         central = QWidget()
         central.setLayout(root)
         self.setCentralWidget(central)
@@ -64,8 +71,9 @@ class MainWindow(QMainWindow):
         self._curve_debounce.timeout.connect(self._request_curves)
 
         self._connect_panel()
-        # The panel's checkbox state is authoritative for the history mode.
+        # The panel's checkbox state is authoritative for the view options.
         self.phase_view.set_trail_mode(self.panel.trail_mode_enabled())
+        self.phase_view.set_show_cycles(self.panel.limit_cycles_enabled())
         if self.interactive:
             self.robot_view.feChanged.connect(self.source.set_fe)
 
@@ -84,6 +92,7 @@ class MainWindow(QMainWindow):
         p.stepRequested.connect(lambda: self.source.request_step())
         p.resetRequested.connect(self._on_reset)
         p.trailModeChanged.connect(self.phase_view.set_trail_mode)
+        p.limitCyclesToggled.connect(self.phase_view.set_show_cycles)
         p.speedChanged.connect(lambda speed: self.source.set_speed(speed))
         if self.interactive:
             p.paramChanged.connect(self._on_param_changed)
@@ -100,17 +109,43 @@ class MainWindow(QMainWindow):
         if chunks:
             self.phase_view.push_samples(chunks)
         self.phase_view.set_snapshot(snap)
+        self.phase_view.set_cushion_ellipse(self._cushion_ellipse(snap))
         self.robot_view.set_snapshot(snap)
         self.panel.update_readout(snap)
         if not self.interactive:
             self.panel.reflect_snapshot(snap)
             self._maybe_refresh_replay_curves(snap)
-        result = self._curve_worker.take_result()
-        if result is not None:
-            seeds, curves, cycle = result
-            self.phase_view.set_curves(curves, seeds)
-            self.phase_view.set_limit_cycle(cycle)
+        portrait = self._curve_worker.take_result()
+        if portrait is not None:
+            self.phase_view.set_curves(portrait.curves, portrait.seeds)
+            self.phase_view.set_limit_cycle(portrait.cycle, portrait.ellipse)
         return snap
+
+    @staticmethod
+    def _cushion_ellipse(snap: Snapshot) -> tuple[np.ndarray, np.ndarray] | None:
+        """Build the transient soft-landing orbit from the morphed parameters.
+
+        When a disturbance makes the robot land from an apex above the
+        commanded za, the soft-landing layer temporarily enlarges the
+        limit cycle to pass through the actual landing state (paper
+        Fig. 8); its geometry is exactly the controller's morphed
+        parameters. Returns None while no enlarged orbit is active.
+        """
+        needed = (snap.za, snap.zh, snap.k, snap.p_za, snap.p_zm, snap.p_zb, snap.p_rho)
+        if not snap.soft_landing or any(math.isnan(v) for v in needed):
+            return None
+        if snap.p_za <= snap.za + CUSHION_TOL:
+            return None
+        q_scale = snap.q_scale if not math.isnan(snap.q_scale) else 1.0
+        z, vz = rhc.stance_ellipse(
+            zh=snap.zh,
+            zm=snap.p_zm,
+            zb=snap.p_zb,
+            rho=snap.p_rho,
+            k=snap.k,
+            q_scale=q_scale,
+        )
+        return (z, vz) if len(z) else None
 
     # -- solution curves ---------------------------------------------------------
     def _request_curves(self) -> None:

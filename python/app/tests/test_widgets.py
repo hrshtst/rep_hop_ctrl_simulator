@@ -142,11 +142,93 @@ def test_phase_view_limit_cycle_overlay(qapp):
     view.set_snapshot(Snapshot(z=0.26, vz=0.0, zh=0.26, za=0.28, zb=0.23))
     without_cycle = view.grab().toImage()
     theta = np.linspace(0.0, 2 * np.pi, 100)
-    view.set_limit_cycle((0.26 + 0.015 * np.cos(theta), 0.66 * np.sin(theta)))
+    ellipse = (0.26 + 0.015 * np.cos(theta), 0.66 * np.sin(theta))
+    view.set_limit_cycle(ellipse, ellipse)
     with_cycle = view.grab().toImage()
     assert with_cycle != without_cycle
-    view.set_limit_cycle(None)
+    # The panel toggle hides every orbit overlay.
+    view.set_show_cycles(False)
     assert view.grab().toImage() == without_cycle
+    view.set_show_cycles(True)
+    view.set_limit_cycle(None, None)
+    assert view.grab().toImage() == without_cycle
+
+
+def test_phase_view_cushion_ellipse_overlay(qapp):
+    from rhc_demo.phase_view import PhaseView
+    from rhc_demo.state import Snapshot
+
+    view = PhaseView()
+    view.resize(400, 400)
+    view.set_snapshot(Snapshot(z=0.26, vz=0.0, zh=0.26, za=0.28, zb=0.23))
+    plain = view.grab().toImage()
+    theta = np.linspace(0.0, 2 * np.pi, 100)
+    view.set_cushion_ellipse((0.27 + 0.04 * np.cos(theta), 1.2 * np.sin(theta)))
+    assert view.grab().toImage() != plain
+    view.set_cushion_ellipse(None)
+    assert view.grab().toImage() == plain
+
+
+def test_cushion_ellipse_only_when_apex_boosted(qapp):
+    from rhc_demo.main_window import MainWindow
+    from rhc_demo.state import Snapshot
+
+    base = {
+        "za": 0.28,
+        "zh": 0.26,
+        "k": 4.0,
+        "q_scale": 1.0,
+        "soft_landing": True,
+        "p_rho": 1.0,
+        "p_zb": 0.23,
+    }
+    # Steady state: morphed apex equals the command, no cushion orbit.
+    assert MainWindow._cushion_ellipse(Snapshot(**base, p_za=0.28, p_zm=0.255)) is None
+    # Landing from a boosted apex 0.35: the enlarged ellipse appears with
+    # the paper's adjusted center zm' = (za' + zb - (za'-zh)^2/(za'-zb))/2
+    # and passes through the landing energy (top at 2 zm' - zb).
+    zm_prime = 0.5 * (0.35 + 0.23 - (0.35 - 0.26) ** 2 / (0.35 - 0.23))
+    boosted = MainWindow._cushion_ellipse(Snapshot(**base, p_za=0.35, p_zm=zm_prime))
+    assert boosted is not None
+    z, _ = boosted
+    assert z.max() == pytest.approx(2 * zm_prime - 0.23, abs=1e-6)
+    # Disabled soft landing never shows a cushion orbit.
+    off = dict(base, soft_landing=False)
+    assert MainWindow._cushion_ellipse(Snapshot(**off, p_za=0.35, p_zm=zm_prime)) is None
+
+
+def test_param_reset_buttons(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+
+    panel = ControlPanel(Params())
+    changes = []
+    panel.paramChanged.connect(lambda name, value: changes.append((name, value)))
+    # rho toggles between the extremes.
+    panel._sliders["rho"]._reset_btn.click()
+    assert panel.params.rho == 1.0
+    panel._sliders["rho"]._reset_btn.click()
+    assert panel.params.rho == 0.0
+    # Other parameters snap back to the paper default.
+    panel._sliders["za"].valueChanged.emit(0.40)
+    assert panel.params.za == pytest.approx(0.40)
+    panel._sliders["za"]._reset_btn.click()
+    assert panel.params.za == pytest.approx(Params().za)
+    assert changes[-1] == ("za", pytest.approx(Params().za))
+
+
+def test_limit_cycle_toggle_defaults_on(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+    from rhc_demo.phase_view import PhaseView
+
+    assert PhaseView()._show_cycles is True
+    panel = ControlPanel(Params())
+    assert panel.limit_cycles_enabled() is True
+    states = []
+    panel.limitCyclesToggled.connect(states.append)
+    panel._limit_cycles.setChecked(False)
+    assert states == [False]
 
 
 def test_speed_radios_emit_selected_factor(qapp):

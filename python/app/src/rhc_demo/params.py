@@ -13,9 +13,9 @@ from dataclasses import dataclass, replace
 EPS = 1e-3
 
 # Absolute slider ranges, in metres. zh is a robot constant (not a slider).
-ZA_RANGE = (0.20, 0.40)
+ZA_RANGE = (0.20, 0.43)
 ZM_RANGE = (0.20, 0.30)
-ZB_RANGE = (0.18, 0.30)
+ZB_RANGE = (0.15, 0.30)
 K_RANGE = (0.5, 16.0)
 Q_SCALE_RANGE = (0.5, 2.0)
 

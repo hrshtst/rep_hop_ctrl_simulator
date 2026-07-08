@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from rhc_demo.replay import ReplaySource
 
 DEFAULT_FPS = 50
-DEFAULT_SIZE = (1280, 720)
+DEFAULT_SIZE = (1600, 900)
 GIF_FPS = 25
 GIF_WIDTH = 960
 

@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
     headless.add_argument("-o", "--out", type=Path, default=Path("rhc_demo_out"), help="output directory")
     headless.add_argument("--fps", type=int, default=50, help="output framerate")
     headless.add_argument("--speed", type=float, default=1.0, help="playback speed factor")
-    headless.add_argument("--size", default="1280x720", help="frame size WxH")
+    headless.add_argument("--size", default="1600x900", help="frame size WxH")
     headless.add_argument("--mp4", action="store_true", help="also encode an MP4")
     headless.add_argument("--gif", action="store_true", help="also encode a GIF")
 
@@ -61,7 +61,7 @@ def _run_gui(window_factory) -> int:
 
     app = QApplication(sys.argv)
     window = window_factory()
-    window.resize(1280, 720)
+    window.resize(1600, 900)
     window.show()
     return app.exec()
 

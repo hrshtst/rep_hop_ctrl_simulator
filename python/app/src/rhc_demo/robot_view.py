@@ -39,7 +39,7 @@ GRF_COLOR = QColor("#1f6feb")  # blue: ground reaction force fz
 FE_COLOR = QColor("#9467bd")  # purple: external force fe
 LABEL_COLOR = QColor("#606060")
 
-Z_VIEW_MAX = 0.56  # metres mapped to the top of the drawing area
+Z_VIEW_MAX = 0.60  # metres mapped to the top of the drawing area
 MARGIN = 18.0
 
 GRF_PX_PER_N = 0.5  # arrow length scaling
@@ -50,9 +50,12 @@ FE_MAX = 800.0  # |fe| cap, N
 # Link geometry in metres (scaled with the robot), radii in pixels.
 BODY_LEN = 0.15  # body link above the hip: long and thin
 BODY_WIDTH = 0.028
-LEG_WIDTH = 0.016  # thigh / shank / foot capsule thickness
-FOOT_LEN = 0.045
+BODY_CORNER_RADIUS = 5.0  # px; near-rectangular with softened edges
+LEG_WIDTH = 0.016  # thigh / shank capsule thickness
+FOOT_LEN = 0.035  # simple thick-line foot segment
+FOOT_WIDTH = 5.0  # px
 JOINT_RADIUS = 7.0
+FOOT_JOINT_RADIUS = 5.0
 COM_RADIUS = 17.0
 # Lift the Secchi disk off the hip so the body-thigh joint stays visible.
 COM_OFFSET = COM_RADIUS + JOINT_RADIUS + 2.0
@@ -78,17 +81,23 @@ def _arrow(painter: QPainter, start: QPointF, end: QPointF, color: QColor, width
     painter.drawPolygon(QPolygonF([end, left, right]))
 
 
-def _link(painter: QPainter, a: QPointF, b: QPointF, width: float) -> None:
-    """Draw a capsule-shaped link outline spanning joints ``a`` to ``b``."""
+def _link(painter: QPainter, a: QPointF, b: QPointF, width: float, radius: float | None = None) -> None:
+    """Draw a rounded-rectangle link outline spanning joints ``a`` to ``b``.
+
+    Corners default to a capsule (radius = half the width); pass a
+    smaller ``radius`` for a near-rectangular link.
+    """
     dx, dy = b.x() - a.x(), b.y() - a.y()
     length = math.hypot(dx, dy)
     if length < 1.0:
         return
-    radius = width / 2.0
+    half = width / 2.0
+    if radius is None:
+        radius = half
     painter.save()
     painter.translate(a)
     painter.rotate(math.degrees(math.atan2(dy, dx)))
-    painter.drawRoundedRect(QRectF(-radius, -radius, length + width, width), radius, radius)
+    painter.drawRoundedRect(QRectF(-half, -half, length + width, width), radius, radius)
     painter.restore()
 
 
@@ -174,7 +183,8 @@ class RobotView(QWidget):
         painter.setPen(QPen(LABEL_COLOR, 1))
         for value, style, label in (
             (snap.za, Qt.PenStyle.DashLine, "z̃_a"),
-            (snap.zh, Qt.PenStyle.DotLine, "z_h"),
+            (snap.zh, Qt.PenStyle.SolidLine, "z_h"),
+            (snap.zm, Qt.PenStyle.DotLine, "z̃_m"),
             (snap.zb, Qt.PenStyle.DashLine, "z̃_b"),
         ):
             if math.isnan(value):
@@ -211,20 +221,23 @@ class RobotView(QWidget):
         hip, knee, foot = self._leg_points(snap)
         scale = self._scale()
 
-        # Links: capsule-shaped outlines — the long thin body above the
-        # hip, then thigh, shank, and a short foot segment.
+        # Links: the long thin near-rectangular body above the hip and
+        # capsule-shaped thigh and shank; the foot stays a simple thick
+        # line segment.
         painter.setPen(QPen(LINK_COLOR, 2))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        _link(painter, hip, QPointF(hip.x(), hip.y() - BODY_LEN * scale), BODY_WIDTH * scale)
+        _link(painter, hip, QPointF(hip.x(), hip.y() - BODY_LEN * scale), BODY_WIDTH * scale, BODY_CORNER_RADIUS)
         _link(painter, hip, knee, LEG_WIDTH * scale)
         _link(painter, knee, foot, LEG_WIDTH * scale)
-        _link(painter, foot, QPointF(foot.x() + FOOT_LEN * scale, foot.y()), LEG_WIDTH * scale)
+        painter.setPen(QPen(LINK_COLOR, FOOT_WIDTH, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.drawLine(foot, QPointF(foot.x() + FOOT_LEN * scale, foot.y()))
 
-        # Joints.
+        # Joints; the foot joint is smaller to match its plain link.
         painter.setPen(QPen(JOINT_COLOR, 1.5))
         painter.setBrush(QBrush(BACKGROUND))
-        for joint in (hip, knee, foot):
+        for joint in (hip, knee):
             painter.drawEllipse(joint, JOINT_RADIUS, JOINT_RADIUS)
+        painter.drawEllipse(foot, FOOT_JOINT_RADIUS, FOOT_JOINT_RADIUS)
 
         # COM: red circle with a Secchi-disk pattern (alternating
         # quadrants), drawn on the body just above the hip joint.

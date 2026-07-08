@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -49,9 +49,21 @@ REGION = (*PHASE_Z_RANGE, *PHASE_VZ_RANGE)
 
 Seed = tuple[float, float]
 Curve = tuple[np.ndarray, np.ndarray]
-# Seeds, their solution curves, and the limit cycle (None when the
-# standing equilibrium is stable instead, i.e. rho <= exp(-k)).
-PortraitResult = tuple[list[Seed], list[Curve], Curve | None]
+
+
+class Portrait(NamedTuple):
+    """One background-computed phase portrait.
+
+    ``cycle`` is the true limit cycle (stance arc plus flight parabola)
+    and ``ellipse`` the full stance ellipse without the lift-off
+    cut-off; both are None when the standing equilibrium is stable
+    instead (rho <= exp(-k)).
+    """
+
+    seeds: list[Seed]
+    curves: list[Curve]
+    cycle: Curve | None
+    ellipse: Curve | None
 
 
 def _edge_seeds() -> list[Seed]:
@@ -120,13 +132,14 @@ def default_seeds(params: Params) -> list[Seed]:
     return seeds
 
 
-def compute_curves(params: Params) -> PortraitResult:
-    """Roll out the seed family and limit cycle with the given parameters.
+def compute_curves(params: Params) -> Portrait:
+    """Roll out the seed family and limit-cycle orbits (blocking).
 
     Returns the seeds together with their curves so consumers (e.g. the
     phase view's debug seed markers) always show the pair atomically,
-    plus the steady-state limit cycle traced by the bindings (None when
-    the standing equilibrium is stable and no cycle exists).
+    plus the steady-state limit cycle traced by the bindings and its
+    full stance ellipse (both None when the standing equilibrium is
+    stable and no cycle exists).
     """
     sim = rhc.DynmorphSim(mass=params.mass)
     sim.za = params.za
@@ -140,8 +153,13 @@ def compute_curves(params: Params) -> PortraitResult:
     seeds = default_seeds(params)
     curves = sim.solution_curves(seeds, CURVE_DURATION, CURVE_DT, CURVE_STRIDE, region=REGION)
     cycle_z, cycle_vz = sim.limit_cycle()
-    cycle = (cycle_z, cycle_vz) if len(cycle_z) else None
-    return seeds, curves, cycle
+    ellipse_z, ellipse_vz = sim.stance_ellipse()
+    return Portrait(
+        seeds,
+        curves,
+        (cycle_z, cycle_vz) if len(cycle_z) else None,
+        (ellipse_z, ellipse_vz) if len(ellipse_z) else None,
+    )
 
 
 class CurveWorker:
@@ -150,7 +168,7 @@ class CurveWorker:
     def __init__(self) -> None:
         self._cond = threading.Condition()
         self._pending: Params | None = None
-        self._result: PortraitResult | None = None
+        self._result: Portrait | None = None
         self._running = True
         self._thread = threading.Thread(target=self._loop, name="curves", daemon=True)
         self._thread.start()
@@ -161,8 +179,8 @@ class CurveWorker:
             self._pending = params
             self._cond.notify()
 
-    def take_result(self) -> PortraitResult | None:
-        """Return freshly computed (seeds, curves, cycle) once, or None if not ready."""
+    def take_result(self) -> Portrait | None:
+        """Return a freshly computed portrait once, or None if not ready."""
         with self._cond:
             result = self._result
             self._result = None

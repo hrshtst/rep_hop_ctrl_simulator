@@ -21,10 +21,12 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QRadioButton,
     QSlider,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -37,12 +39,21 @@ if TYPE_CHECKING:
 
 SLIDER_TICKS = 1000
 PLAYBACK_SPEEDS = (1.0, 0.75, 0.5, 0.25)
+PARAM_SPACING = 12  # px between the sliders so their labels stay clear
+
+# Per-slider reset targets: the paper defaults.
+_DEFAULTS = Params()
 
 
 class _ParamSlider(QWidget):
-    """A labelled float slider mapping to [lo, hi] with SLIDER_TICKS steps."""
+    """A labelled float slider mapping to [lo, hi] with SLIDER_TICKS steps.
+
+    A small reset button sits next to the slider; the panel decides
+    what value it snaps to.
+    """
 
     valueChanged = pyqtSignal(float)
+    resetClicked = pyqtSignal()
 
     def __init__(self, label: str, lo: float, hi: float, value: float, unit: str = "m") -> None:
         super().__init__()
@@ -56,12 +67,24 @@ class _ParamSlider(QWidget):
         self._updating = False
         self.set_value(value)
         self._slider.valueChanged.connect(self._on_slider)
+        self._reset_btn = QToolButton()
+        self._reset_btn.setText("↺")
+        self._reset_btn.setToolTip("Reset to default")
+        self._reset_btn.clicked.connect(self.resetClicked.emit)
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(4)
+        row.addWidget(self._slider)
+        row.addWidget(self._reset_btn)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(1)
         layout.addWidget(self._label)
-        layout.addWidget(self._slider)
+        layout.addLayout(row)
         self.setLayout(layout)
+
+    def set_reset_tooltip(self, text: str) -> None:
+        self._reset_btn.setToolTip(text)
 
     def _to_float(self, ticks: int) -> float:
         return self._lo + (self._hi - self._lo) * ticks / SLIDER_TICKS
@@ -85,6 +108,7 @@ class _ParamSlider(QWidget):
 
     def setEnabled(self, enabled: bool) -> None:
         self._slider.setEnabled(enabled)
+        self._reset_btn.setEnabled(enabled)
 
 
 class ControlPanel(QWidget):
@@ -93,6 +117,7 @@ class ControlPanel(QWidget):
     paramChanged = pyqtSignal(str, float)
     softLandingChanged = pyqtSignal(bool)
     trailModeChanged = pyqtSignal(bool)
+    limitCyclesToggled = pyqtSignal(bool)
     pauseToggled = pyqtSignal(bool)
     stepRequested = pyqtSignal()
     resetRequested = pyqtSignal()
@@ -103,7 +128,7 @@ class ControlPanel(QWidget):
         super().__init__()
         self.params = params
         self._interactive = interactive
-        self.setMinimumWidth(240)
+        self.setMinimumWidth(280)
 
         root = QVBoxLayout()
         root.addWidget(self._make_param_group(params))
@@ -124,6 +149,7 @@ class ControlPanel(QWidget):
     def _make_param_group(self, p: Params) -> QGroupBox:
         group = QGroupBox("Control parameters")
         grid = QVBoxLayout()
+        grid.setSpacing(PARAM_SPACING)
         self._sliders: dict[str, _ParamSlider] = {}
         specs: list[tuple[str, str, tuple[float, float], float, str]] = [
             ("rho", "ρ̃  (0: stand, 1: hop)", (0.0, 1.0), p.rho, ""),
@@ -136,8 +162,10 @@ class ControlPanel(QWidget):
         for name, label, (lo, hi), value, unit in specs:
             slider = _ParamSlider(label, lo, hi, value, unit)
             slider.valueChanged.connect(self._make_param_handler(name))
+            slider.resetClicked.connect(self._make_reset_handler(name))
             self._sliders[name] = slider
             grid.addWidget(slider)
+        self._sliders["rho"].set_reset_tooltip("Toggle between stand (0) and hop (1)")
         self._zh_label = QLabel(f"z_h = {p.zh:.3f} m (robot constant)")
         grid.addWidget(self._zh_label)
         group.setLayout(grid)
@@ -149,6 +177,16 @@ class ControlPanel(QWidget):
             self.params = replace(self.params, **{name: clamped})
             self._sliders[name].set_value(clamped)
             self.paramChanged.emit(name, clamped)
+
+        return handler
+
+    def _make_reset_handler(self, name: str) -> Callable[[], None]:
+        def handler() -> None:
+            value = getattr(_DEFAULTS, name)
+            if name == "rho":
+                # The rho reset toggles between the two extremes instead.
+                value = 1.0 if self.params.rho == 0.0 else 0.0
+            self._make_param_handler(name)(value)
 
         return handler
 
@@ -165,6 +203,10 @@ class ControlPanel(QWidget):
         self._trail_mode.setChecked(True)
         self._trail_mode.toggled.connect(self.trailModeChanged.emit)
         box.addWidget(self._trail_mode)
+        self._limit_cycles = QCheckBox("Show limit-cycle orbits")
+        self._limit_cycles.setChecked(True)
+        self._limit_cycles.toggled.connect(self.limitCyclesToggled.emit)
+        box.addWidget(self._limit_cycles)
         group.setLayout(box)
         return group
 
@@ -216,6 +258,9 @@ class ControlPanel(QWidget):
 
     def trail_mode_enabled(self) -> bool:
         return self._trail_mode.isChecked()
+
+    def limit_cycles_enabled(self) -> bool:
+        return self._limit_cycles.isChecked()
 
     # -- updates from the frame loop --------------------------------------------
     def set_parameters_enabled(self, enabled: bool) -> None:

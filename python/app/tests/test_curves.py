@@ -80,9 +80,9 @@ def test_straddle_points_bracket_squat_center():
 
 
 def test_compute_curves_pairs_each_seed_with_its_curve():
-    seeds, curves, _ = compute_curves(Params(rho=1.0))
-    assert len(seeds) == len(curves)
-    for (z0, vz0), (z, vz) in zip(seeds, curves, strict=True):
+    portrait = compute_curves(Params(rho=1.0))
+    assert len(portrait.seeds) == len(portrait.curves)
+    for (z0, vz0), (z, vz) in zip(portrait.seeds, portrait.curves, strict=True):
         assert z[0] == pytest.approx(z0)
         assert vz[0] == pytest.approx(vz0)
 
@@ -92,35 +92,50 @@ def test_worker_returns_result_once():
     try:
         worker.request(replace(Params(), soft_landing=False))
         deadline = time.monotonic() + 5.0
-        result = None
-        while result is None and time.monotonic() < deadline:
-            result = worker.take_result()
+        portrait = None
+        while portrait is None and time.monotonic() < deadline:
+            portrait = worker.take_result()
             time.sleep(0.01)
-        assert result is not None
-        seeds, curves, cycle = result
-        assert len(seeds) == len(curves) == N_EDGE
-        assert cycle is None  # rho = 0: standing regulator, no cycle
+        assert portrait is not None
+        assert len(portrait.seeds) == len(portrait.curves) == N_EDGE
+        # rho = 0: standing regulator, no cycle and no ellipse.
+        assert portrait.cycle is None
+        assert portrait.ellipse is None
         assert worker.take_result() is None
     finally:
         worker.close()
 
 
 def test_curve_points_stay_inside_view_region():
-    _, curves, _ = compute_curves(Params(rho=1.0))
-    for z, vz in curves:
+    portrait = compute_curves(Params(rho=1.0))
+    for z, vz in portrait.curves:
         assert np.all((z >= PHASE_Z_RANGE[0]) & (z <= PHASE_Z_RANGE[1]))
         assert np.all((vz >= PHASE_VZ_RANGE[0]) & (vz <= PHASE_VZ_RANGE[1]))
 
 
 def test_limit_cycle_present_when_hopping():
-    _, _, cycle = compute_curves(Params(rho=1.0))
-    assert cycle is not None
-    z, vz = cycle
+    portrait = compute_curves(Params(rho=1.0))
+    assert portrait.cycle is not None
+    z, vz = portrait.cycle
     assert len(z) == len(vz) > 10
     assert z[0] == z[-1]  # closed loop
     assert z.max() == pytest.approx(0.28, abs=1e-3)  # apex at za
 
 
+def test_stance_ellipse_accompanies_the_cycle():
+    portrait = compute_curves(Params(rho=1.0))
+    assert portrait.ellipse is not None
+    ez, _evz = portrait.ellipse
+    assert ez[0] == pytest.approx(ez[-1])  # closed loop
+    # The full ellipse ignores the lift-off cut-off: its top (zm + r with
+    # the nominal zb adjustment, 0.27) lies above zh but below the true
+    # cycle's flight apex.
+    assert ez.max() == pytest.approx(0.27, abs=1e-6)
+    cycle_z, _ = portrait.cycle
+    assert ez.max() < cycle_z.max()
+
+
 def test_limit_cycle_absent_when_standing():
-    _, _, cycle = compute_curves(Params(rho=0.0))
-    assert cycle is None
+    portrait = compute_curves(Params(rho=0.0))
+    assert portrait.cycle is None
+    assert portrait.ellipse is None

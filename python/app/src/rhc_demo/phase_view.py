@@ -1,12 +1,13 @@
 """Phase portrait view: (z, vz) plane of the vertical COM dynamics.
 
 Per the directive: white background; solid black axes at z = zh and
-vz = 0; thin gray solution curves; the stance-phase limit cycle as a
-solid black closed loop (drawn after the curves so it is never
-obscured); dotted boundary lines at the target apex (za) and the
-kinematic lower limit (zb); the current COM state as a solid red
-circle; and a COM history that can be toggled between a continuous
-line and a fading trail of recent states.
+vz = 0; thin gray solution curves; the limit-cycle orbits drawn over
+them (bottom to top: the soft-landing cushion ellipse in dotted green,
+the full stance ellipse in dotted blue, the true limit cycle in solid
+blue), toggleable from the control panel; dotted boundary lines at the
+target apex (za) and the kinematic lower limit (zb); the current COM
+state as a solid red circle; and a COM history that can be toggled
+between a continuous line and a fading trail of recent states.
 
 For debugging the curve family, the initial seeds of the solution
 curves can be overlaid as black circles (``show_seeds``; enabled with
@@ -37,7 +38,8 @@ if TYPE_CHECKING:
 BACKGROUND = QColor("#ffffff")
 AXIS_COLOR = QColor("#000000")
 CURVE_COLOR = QColor("#b0b0b0")
-CYCLE_COLOR = QColor("#000000")
+CYCLE_COLOR = QColor("#1f77b4")  # blue: true limit cycle / stance ellipse
+CUSHION_COLOR = QColor("#2ca02c")  # green: soft-landing cushion ellipse
 BOUNDARY_COLOR = QColor("#404040")
 COM_COLOR = QColor("#d62728")
 HISTORY_COLOR = QColor("#e08080")
@@ -50,12 +52,20 @@ MIN_POLYLINE = 2  # points needed to draw a line
 TRAIL_LEN = 15  # discrete-trail mode: number of recent states drawn
 HISTORY_MAX = 200_000  # stored history points before compaction
 HISTORY_DECIMATE = 5  # store every 5th incoming sample (1 kHz -> 200 Hz)
+CYCLE_WIDTH = 2.0  # px; shared by all three limit-cycle orbits
 
 
 def _cosmetic_pen(color: QColor, width: float, style: Qt.PenStyle = Qt.PenStyle.SolidLine) -> QPen:
     pen = QPen(color, width, style)
     pen.setCosmetic(True)  # keep line width in pixels under the world transform
     return pen
+
+
+def _polygon(curve: tuple[np.ndarray, np.ndarray] | None) -> QPolygonF | None:
+    if curve is None:
+        return None
+    z, vz = curve
+    return QPolygonF([QPointF(float(z[j]), float(vz[j])) for j in range(len(z))])
 
 
 class PhaseView(QWidget):
@@ -66,6 +76,9 @@ class PhaseView(QWidget):
         self.setMinimumSize(400, 320)
         self._curve_polys: list[QPolygonF] = []
         self._cycle_poly: QPolygonF | None = None
+        self._ellipse_poly: QPolygonF | None = None
+        self._cushion_poly: QPolygonF | None = None
+        self._show_cycles = True
         self._seed_pts: list[QPointF] = []
         self._show_seeds = show_seeds
         self._history = QPolygonF()
@@ -90,13 +103,24 @@ class PhaseView(QWidget):
         self._seed_pts = [QPointF(z0, vz0) for z0, vz0 in seeds] if seeds else []
         self.update()
 
-    def set_limit_cycle(self, cycle: tuple[np.ndarray, np.ndarray] | None) -> None:
-        """Set the stance-phase limit cycle loop, or None when there is none."""
-        if cycle is None:
-            self._cycle_poly = None
-        else:
-            z, vz = cycle
-            self._cycle_poly = QPolygonF([QPointF(float(z[j]), float(vz[j])) for j in range(len(z))])
+    def set_limit_cycle(
+        self,
+        cycle: tuple[np.ndarray, np.ndarray] | None,
+        ellipse: tuple[np.ndarray, np.ndarray] | None,
+    ) -> None:
+        """Set the true limit cycle and its full stance ellipse (None: no cycle)."""
+        self._cycle_poly = _polygon(cycle)
+        self._ellipse_poly = _polygon(ellipse)
+        self.update()
+
+    def set_cushion_ellipse(self, ellipse: tuple[np.ndarray, np.ndarray] | None) -> None:
+        """Set the transient soft-landing cushion ellipse, or None to hide it."""
+        self._cushion_poly = _polygon(ellipse)
+        self.update()
+
+    def set_show_cycles(self, on: bool) -> None:
+        """Toggle visibility of all limit-cycle orbit overlays."""
+        self._show_cycles = on
         self.update()
 
     def set_show_seeds(self, on: bool) -> None:
@@ -174,12 +198,21 @@ class PhaseView(QWidget):
             painter.setPen(_cosmetic_pen(HISTORY_COLOR, 1.0))
             painter.drawPolyline(self._history)
 
-        # Stance-phase limit cycle: a solid black closed loop, drawn after
-        # the solution curves and guides so it is never obscured by them.
-        if self._cycle_poly is not None and self._cycle_poly.size() >= MIN_POLYLINE:
-            painter.setPen(_cosmetic_pen(CYCLE_COLOR, 2.0))
+        # Limit-cycle orbits, drawn after the solution curves and guides so
+        # they are never obscured. Bottom to top: the transient soft-landing
+        # cushion ellipse (dotted green), the full stance ellipse without
+        # the lift-off cut-off (dotted blue), the true limit cycle (solid
+        # blue).
+        if self._show_cycles:
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawPolyline(self._cycle_poly)
+            for poly, pen in (
+                (self._cushion_poly, _cosmetic_pen(CUSHION_COLOR, CYCLE_WIDTH, Qt.PenStyle.DotLine)),
+                (self._ellipse_poly, _cosmetic_pen(CYCLE_COLOR, CYCLE_WIDTH, Qt.PenStyle.DotLine)),
+                (self._cycle_poly, _cosmetic_pen(CYCLE_COLOR, CYCLE_WIDTH)),
+            ):
+                if poly is not None and poly.size() >= MIN_POLYLINE:
+                    painter.setPen(pen)
+                    painter.drawPolyline(poly)
 
     def _draw_overlay(self, painter: QPainter, tr: QTransform) -> None:
         snap = self._snap
