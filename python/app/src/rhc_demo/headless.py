@@ -47,7 +47,7 @@ def render_frames(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    window = MainWindow(source, show_seeds=show_seeds)
+    window = MainWindow(source, show_seeds=show_seeds, headless=True)
     window._timer.stop()  # noqa: SLF001 — headless drives frames explicitly
     window.resize(*size)
     source.set_paused(True)

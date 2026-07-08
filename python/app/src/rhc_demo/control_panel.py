@@ -135,7 +135,7 @@ class ControlPanel(QWidget):
     exportRequested = pyqtSignal()
     speedChanged = pyqtSignal(float)
 
-    def __init__(self, params: Params, *, interactive: bool = True) -> None:
+    def __init__(self, params: Params, *, interactive: bool = True, show_speed: bool = True) -> None:
         super().__init__()
         self.params = params
         self._interactive = interactive
@@ -144,7 +144,10 @@ class ControlPanel(QWidget):
         root = QVBoxLayout()
         root.addWidget(self._make_param_group(params))
         root.addWidget(self._make_toggle_group(params))
-        root.addWidget(self._make_speed_group())
+        if show_speed:
+            # Headless rendering fixes the playback speed on the command
+            # line (--speed), so the radio group would be dead weight.
+            root.addWidget(self._make_speed_group())
         root.addWidget(self._make_execution_group())
         self._readout = QLabel()
         self._readout.setTextFormat(Qt.TextFormat.PlainText)

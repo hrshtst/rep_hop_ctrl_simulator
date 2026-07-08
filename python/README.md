@@ -89,7 +89,9 @@ The parameter widgets are disabled and mirror the logged values.
 window is shown — under Wayland capturing live windows is restricted, so
 offscreen rendering is the supported path) into a deterministic PNG frame
 sequence, then optionally encodes MP4/GIF with the ffmpeg binary bundled by
-`imageio-ffmpeg`.
+`imageio-ffmpeg`. `--speed` sets the playback speed baked into the video
+(`--speed 0.5` renders half-speed slow motion with twice the frames); the
+in-app playback-speed radios are therefore not rendered in headless frames.
 
 Qt platform is auto-detected (native Wayland on GNOME, WSLg, or X11); set
 `QT_QPA_PLATFORM` explicitly only to override.

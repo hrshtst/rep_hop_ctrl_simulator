@@ -41,7 +41,13 @@ CUSHION_TOL = 1e-3
 class MainWindow(QMainWindow):
     """Three-panel demo window driven by a live engine or a replay source."""
 
-    def __init__(self, source: LiveEngine | ReplaySource, *, show_seeds: bool = False) -> None:
+    def __init__(
+        self,
+        source: LiveEngine | ReplaySource,
+        *,
+        show_seeds: bool = False,
+        headless: bool = False,
+    ) -> None:
         super().__init__()
         self.source = source
         self.interactive = isinstance(source, LiveEngine)
@@ -51,7 +57,9 @@ class MainWindow(QMainWindow):
         params = source.params if self.interactive else Params()
         self.phase_view = PhaseView(show_seeds=show_seeds)
         self.robot_view = RobotView(interactive=self.interactive)
-        self.panel = ControlPanel(params, interactive=self.interactive)
+        # Headless renders at a speed fixed by the CLI; hide the
+        # never-changing playback-speed radios from the frames.
+        self.panel = ControlPanel(params, interactive=self.interactive, show_speed=not headless)
         # The phase portrait gets the widest pane so it renders close to
         # a square; its z-range upper limit is widened to match. The
         # panel's share fits the per-slider reset buttons.

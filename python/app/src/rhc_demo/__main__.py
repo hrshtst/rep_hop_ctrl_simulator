@@ -42,7 +42,12 @@ def _build_parser() -> argparse.ArgumentParser:
     headless.add_argument("csv", type=Path, help="logger-schema CSV file")
     headless.add_argument("-o", "--out", type=Path, default=Path("rhc_demo_out"), help="output directory")
     headless.add_argument("--fps", type=int, default=50, help="output framerate")
-    headless.add_argument("--speed", type=float, default=1.0, help="playback speed factor")
+    headless.add_argument(
+        "--speed",
+        type=float,
+        default=1.0,
+        help="playback speed of the rendered video (0.5 = half-speed slow motion)",
+    )
     headless.add_argument("--size", default="1600x900", help="frame size WxH")
     headless.add_argument("--mp4", action="store_true", help="also encode an MP4")
     headless.add_argument("--gif", action="store_true", help="also encode a GIF")
