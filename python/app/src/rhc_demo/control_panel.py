@@ -16,7 +16,8 @@ import math
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, pyqtSignal
+import qtawesome as qta
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QGridLayout,
@@ -37,12 +38,21 @@ from rhc_demo.state import Snapshot, fmt
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from PyQt6.QtGui import QIcon
+
 SLIDER_TICKS = 1000
 PLAYBACK_SPEEDS = (1.0, 0.75, 0.5, 0.25)
 PARAM_SPACING = 12  # px between the sliders so their labels stay clear
+ICON_COLOR = "#404040"  # transport-button glyphs, matching the app grays
 
 # Per-slider reset targets: the paper defaults.
 _DEFAULTS = Params()
+
+
+def _icon(name: str) -> QIcon:
+    # qtawesome renders from bundled fonts, so the glyphs look the same
+    # on Wayland, WSLg, and the offscreen platform used for videos.
+    return qta.icon(name, color=ICON_COLOR)
 
 
 class _ParamSlider(QWidget):
@@ -120,6 +130,7 @@ class ControlPanel(QWidget):
     limitCyclesToggled = pyqtSignal(bool)
     pauseToggled = pyqtSignal(bool)
     stepRequested = pyqtSignal()
+    stepBackRequested = pyqtSignal()
     resetRequested = pyqtSignal()
     exportRequested = pyqtSignal()
     speedChanged = pyqtSignal(float)
@@ -232,28 +243,64 @@ class ControlPanel(QWidget):
 
     def _make_execution_group(self) -> QGroupBox:
         group = QGroupBox("Execution")
-        grid = QGridLayout()
-        self._pause_btn = QPushButton("Pause")
+        box = QVBoxLayout()
+
+        # Transport row: icon buttons, media-player order.
+        def tool_button(tooltip: str) -> QToolButton:
+            btn = QToolButton()
+            btn.setIconSize(QSize(20, 20))
+            btn.setToolTip(tooltip)
+            btn.setAccessibleName(tooltip)
+            return btn
+
+        self._step_back_btn = tool_button("Step backward (replay mode only)")
+        self._step_back_btn.setIcon(_icon("mdi6.step-backward"))
+        self._step_back_btn.setEnabled(False)
+        self._step_back_btn.clicked.connect(self.stepBackRequested.emit)
+        self._pause_btn = tool_button("Pause")
         self._pause_btn.setCheckable(True)
         self._pause_btn.toggled.connect(self._on_pause_toggled)
-        self._step_btn = QPushButton("Step")
+        self._step_btn = tool_button("Step forward")
+        self._step_btn.setIcon(_icon("mdi6.step-forward"))
         self._step_btn.setEnabled(False)
         self._step_btn.clicked.connect(self.stepRequested.emit)
+        self._apply_pause_visual(paused=False)
+        transport = QHBoxLayout()
+        transport.addStretch(1)
+        for btn in (self._step_back_btn, self._pause_btn, self._step_btn):
+            transport.addWidget(btn)
+        transport.addStretch(1)
+        box.addLayout(transport)
+
+        # Text actions below the transport row.
+        actions = QHBoxLayout()
         self._reset_btn = QPushButton("Reset")
         self._reset_btn.clicked.connect(self.resetRequested.emit)
-        grid.addWidget(self._pause_btn, 0, 0)
-        grid.addWidget(self._step_btn, 0, 1)
-        grid.addWidget(self._reset_btn, 1, 0)
+        actions.addWidget(self._reset_btn)
         if self._interactive:
             export_btn = QPushButton("Export CSV…")
             export_btn.clicked.connect(self.exportRequested.emit)
-            grid.addWidget(export_btn, 1, 1)
-        group.setLayout(grid)
+            actions.addWidget(export_btn)
+        box.addLayout(actions)
+        group.setLayout(box)
         return group
 
-    def _on_pause_toggled(self, paused: bool) -> None:
-        self._pause_btn.setText("Resume" if paused else "Pause")
+    def _apply_pause_visual(self, *, paused: bool) -> None:
+        """Swap the pause/play icon and tooltip with the pause state."""
+        self._pause_btn.setIcon(_icon("mdi6.play" if paused else "mdi6.pause"))
+        tooltip = "Resume" if paused else "Pause"
+        self._pause_btn.setToolTip(tooltip)
+        self._pause_btn.setAccessibleName(tooltip)
+
+    def _update_step_buttons(self, *, paused: bool) -> None:
         self._step_btn.setEnabled(paused)
+        # Stepping backward needs recorded samples ahead of the cursor,
+        # so it is a replay-only affordance.
+        self._step_back_btn.setEnabled(paused and not self._interactive)
+
+    def _on_pause_toggled(self, paused: bool) -> None:
+        self._apply_pause_visual(paused=paused)
+        self._update_step_buttons(paused=paused)
         self.pauseToggled.emit(paused)
 
     def trail_mode_enabled(self) -> bool:
@@ -299,6 +346,6 @@ class ControlPanel(QWidget):
         if self._pause_btn.isChecked() != paused:
             self._pause_btn.blockSignals(True)  # noqa: FBT003
             self._pause_btn.setChecked(paused)
-            self._pause_btn.setText("Resume" if paused else "Pause")
-            self._step_btn.setEnabled(paused)
+            self._apply_pause_visual(paused=paused)
+            self._update_step_buttons(paused=paused)
             self._pause_btn.blockSignals(False)  # noqa: FBT003

@@ -55,6 +55,29 @@ def test_step_advances_cursor_while_paused(data):
     assert snap1.t - snap0.t == pytest.approx(0.05, abs=0.005)
 
 
+def test_step_back_rewinds_cursor_while_paused(data):
+    src = ReplaySource(data)
+    src.set_paused(True)
+    src.seek_time(0.5)
+    snap0, _ = src.frame()
+    src.request_step_back(0.05)
+    snap1, _ = src.frame()
+    assert snap0.t - snap1.t == pytest.approx(0.05, abs=0.005)
+    # Rewinding never emits duplicate history when re-advancing.
+    src.request_step(0.05)
+    _, chunks = src.frame()
+    assert sum(len(z) for z, _ in chunks) == 0
+
+
+def test_step_back_clamps_at_start(data):
+    src = ReplaySource(data)
+    src.set_paused(True)
+    src.seek_time(0.02)
+    src.request_step_back(1.0)
+    snap, _ = src.frame()
+    assert snap.t == pytest.approx(data["t"][0])
+
+
 def test_reset_rewinds(data):
     src = ReplaySource(data)
     src.set_paused(True)

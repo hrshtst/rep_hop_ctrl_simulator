@@ -87,6 +87,15 @@ class ReplaySource:
         """While paused, move the cursor forward by ``duration`` seconds."""
         self._time = min(self._time + duration, float(self._t[-1]))
 
+    def request_step_back(self, duration: float = STEP_INCREMENT) -> None:
+        """While paused, move the cursor backward by ``duration`` seconds.
+
+        Replay-only: the cursor just rewinds over the recorded samples
+        (already-emitted history is kept, so re-advancing over the same
+        span does not duplicate it).
+        """
+        self._time = max(self._time - duration, float(self._t[0]))
+
     def reset(self) -> None:
         self._idx = 0
         self._emitted = 0

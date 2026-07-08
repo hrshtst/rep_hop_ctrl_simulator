@@ -242,6 +242,49 @@ def test_secchi_disk_center_marks_the_com_height(qapp):
             assert foot.y() == pytest.approx(view._ground_y())
 
 
+def test_pause_button_swaps_icon_and_tooltip(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+
+    panel = ControlPanel(Params())
+    assert panel._pause_btn.toolTip() == "Pause"
+    assert not panel._pause_btn.icon().isNull()
+    panel._pause_btn.setChecked(True)
+    assert panel._pause_btn.toolTip() == "Resume"
+    panel.sync_pause_state(paused=False)
+    assert panel._pause_btn.toolTip() == "Pause"
+
+
+def test_step_back_is_replay_only(qapp):
+    from rhc_demo.control_panel import ControlPanel
+    from rhc_demo.params import Params
+
+    interactive = ControlPanel(Params(), interactive=True)
+    interactive._pause_btn.setChecked(True)
+    assert interactive._step_btn.isEnabled()
+    assert not interactive._step_back_btn.isEnabled()
+
+    replay = ControlPanel(Params(), interactive=False)
+    backs = []
+    replay.stepBackRequested.connect(lambda: backs.append(True))
+    assert not replay._step_back_btn.isEnabled()  # running: stepping disabled
+    replay._pause_btn.setChecked(True)
+    assert replay._step_back_btn.isEnabled()
+    replay._step_back_btn.click()
+    assert backs == [True]
+
+
+def test_replay_window_steps_backward(replay_window):
+    window = replay_window
+    window.source.set_paused(True)
+    window.panel.sync_pause_state(paused=True)
+    window.source.seek_time(0.3)
+    t0 = window.render_frame().t
+    window.panel._step_back_btn.click()
+    t1 = window.render_frame().t
+    assert t0 - t1 == pytest.approx(0.01, abs=0.005)  # one STEP_INCREMENT
+
+
 def test_param_reset_buttons(qapp):
     from rhc_demo.control_panel import ControlPanel
     from rhc_demo.params import Params

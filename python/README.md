@@ -65,10 +65,12 @@ with its per-slider reset button (the ρ̃ button toggles between 0 and 1);
 click and drag vertically inside the robot view to apply an external vertical
 force f_e (the plant is 1-DOF, so the horizontal drag component is discarded);
 toggle the soft-landing strategy; slow playback down to 0.75x/0.5x/0.25x;
-pause/step/reset; and **Export CSV** to save the session in the simulator's
-logger schema for later replay or headless rendering (Reset also clears the
-recorded history, so an export contains only the session since the last
-reset).
+pause/resume and step with the icon transport buttons (qtawesome Material
+glyphs; stepping backward is replay-only, since the live engine cannot run
+time in reverse); reset; and **Export CSV** to save the session in the
+simulator's logger schema for later replay or headless rendering (Reset also
+clears the recorded history, so an export contains only the session since
+the last reset).
 
 Whenever the stance dynamics has a stable limit cycle (ρ̃ above `exp(-k)`),
 the phase portrait overlays the limit-cycle orbits (toggleable from the

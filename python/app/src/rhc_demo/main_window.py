@@ -90,6 +90,9 @@ class MainWindow(QMainWindow):
         p = self.panel
         p.pauseToggled.connect(lambda paused: self.source.set_paused(paused))
         p.stepRequested.connect(lambda: self.source.request_step())
+        if not self.interactive:
+            # Rewinding needs recorded samples: replay sources only.
+            p.stepBackRequested.connect(lambda: self.source.request_step_back())
         p.resetRequested.connect(self._on_reset)
         p.trailModeChanged.connect(self.phase_view.set_trail_mode)
         p.limitCyclesToggled.connect(self.phase_view.set_show_cycles)
