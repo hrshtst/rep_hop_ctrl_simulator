@@ -26,3 +26,11 @@ def test_bare_invocation_yields_empty_overrides():
     args = _build_parser().parse_args([])
     overrides = {name: getattr(args, name, None) for name in PARAM_OPTIONS}
     assert all(value is None for value in overrides.values())
+    assert getattr(args, "paused", False) is False
+
+
+def test_paused_flag_on_interactive_and_replay():
+    parser = _build_parser()
+    assert parser.parse_args(["interactive"]).paused is False
+    assert parser.parse_args(["interactive", "--paused"]).paused is True
+    assert parser.parse_args(["replay", "x.csv", "--paused"]).paused is True

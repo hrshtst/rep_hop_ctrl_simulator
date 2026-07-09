@@ -351,3 +351,39 @@ def test_fading_trail_is_the_default(qapp):
 
 def test_window_syncs_trail_mode_from_panel(replay_window):
     assert replay_window.phase_view._trail_mode is replay_window.panel.trail_mode_enabled()
+
+
+def test_interactive_window_can_start_paused(qapp):
+    import time
+
+    from rhc_demo.engine import LiveEngine
+    from rhc_demo.main_window import MainWindow
+
+    window = MainWindow(LiveEngine(), start_paused=True)
+    window._timer.stop()
+    time.sleep(0.15)  # physics would advance here if it were running
+    snap = window.render_frame()
+    assert not snap.playing
+    assert snap.t == pytest.approx(0.0, abs=1e-6)
+    # The panel mirrors the paused state: play offered, stepping enabled.
+    assert window.panel._pause_btn.isChecked()
+    assert window.panel._pause_btn.toolTip() == "Resume"
+    assert window.panel._step_btn.isEnabled()
+    window.close()
+
+
+def test_replay_window_can_start_paused(qapp):
+    import rhc as _rhc
+    from rhc_demo.main_window import MainWindow
+
+    sim = _rhc.DynmorphSim()
+    sim.rho = 1.0
+    data = concat_records([sim.advance(2000, 1e-4, 10)])
+    window = MainWindow(ReplaySource(data), start_paused=True)
+    window._timer.stop()
+    snap = window.render_frame()
+    assert not snap.playing
+    assert snap.t == pytest.approx(data["t"][0])
+    assert window.panel._pause_btn.isChecked()
+    assert window.panel._step_back_btn.isEnabled()  # replay + paused
+    window.close()

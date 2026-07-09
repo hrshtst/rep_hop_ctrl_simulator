@@ -51,6 +51,13 @@ def _build_parser() -> argparse.ArgumentParser:
     replay.add_argument("csv", type=Path, help="logger-schema CSV file")
     replay.add_argument("--speed", type=float, default=1.0, help="playback speed factor")
 
+    for mode in (interactive, replay):
+        mode.add_argument(
+            "--paused",
+            action="store_true",
+            help="launch paused; resume with the play button (or step through)",
+        )
+
     headless = sub.add_parser("headless", help="render a CSV offscreen to frames and video")
     headless.add_argument("csv", type=Path, help="logger-schema CSV file")
     headless.add_argument("-o", "--out", type=Path, default=Path("rhc_demo_out"), help="output directory")
@@ -87,7 +94,12 @@ def _run_gui(window_factory) -> int:
 PARAM_OPTIONS = ("rho", "za", "zm", "zb", "k", "q_scale")
 
 
-def _main_interactive(*, show_seeds: bool = False, overrides: dict[str, float | None] | None = None) -> int:
+def _main_interactive(
+    *,
+    show_seeds: bool = False,
+    overrides: dict[str, float | None] | None = None,
+    paused: bool = False,
+) -> int:
     from rhc_demo.params import initial_params
 
     params, warnings = initial_params(overrides or {})
@@ -98,17 +110,17 @@ def _main_interactive(*, show_seeds: bool = False, overrides: dict[str, float | 
         from rhc_demo.engine import LiveEngine
         from rhc_demo.main_window import MainWindow
 
-        return MainWindow(LiveEngine(params), show_seeds=show_seeds)
+        return MainWindow(LiveEngine(params), show_seeds=show_seeds, start_paused=paused)
 
     return _run_gui(factory)
 
 
-def _main_replay(csv: Path, speed: float, *, show_seeds: bool = False) -> int:
+def _main_replay(csv: Path, speed: float, *, show_seeds: bool = False, paused: bool = False) -> int:
     def factory() -> MainWindow:
         from rhc_demo.main_window import MainWindow
         from rhc_demo.replay import load_replay
 
-        return MainWindow(load_replay(csv, speed=speed), show_seeds=show_seeds)
+        return MainWindow(load_replay(csv, speed=speed), show_seeds=show_seeds, start_paused=paused)
 
     return _run_gui(factory)
 
@@ -159,13 +171,14 @@ def _main_headless(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.mode == "replay":
-        return _main_replay(args.csv, args.speed, show_seeds=args.show_seeds)
+        return _main_replay(args.csv, args.speed, show_seeds=args.show_seeds, paused=args.paused)
     if args.mode == "headless":
         return _main_headless(args)
     # Bare invocation has no subcommand namespace, hence the getattr defaults.
     return _main_interactive(
         show_seeds=getattr(args, "show_seeds", False),
         overrides={name: getattr(args, name, None) for name in PARAM_OPTIONS},
+        paused=getattr(args, "paused", False),
     )
 
 

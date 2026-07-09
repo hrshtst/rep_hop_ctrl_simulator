@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         *,
         show_seeds: bool = False,
         headless: bool = False,
+        start_paused: bool = False,
     ) -> None:
         super().__init__()
         self.source = source
@@ -93,6 +94,11 @@ class MainWindow(QMainWindow):
         self._timer.timeout.connect(self._tick)
 
         self.source.start()
+        if start_paused:
+            # Launch paused (--paused): freeze the source and mirror the
+            # state on the panel so the play button offers to resume.
+            self.source.set_paused(True)
+            self.panel.sync_pause_state(paused=True)
         self._request_curves()
         self._timer.start()
 
