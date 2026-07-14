@@ -188,23 +188,27 @@ setaf() {
 }
 
 # Prints the result summary after all tests are executed. Supposed
-# that failed tests are passed as arguments.
+# that failed tests are passed as arguments. All tput invocations must
+# tolerate a missing/dumb $TERM (e.g. CI runners): under `set -e` an
+# unguarded tput failure would abort the whole runner with its exit
+# code even though every test passed.
 report_summary() {
-  reset=$(tput sgr0)
+  reset=$(tput sgr0 2>/dev/null ||:)
   red=$(setaf red)
   green=$(setaf green)
+  cols=$(tput cols 2>/dev/null ||:)
   echo
   if [ $# -eq 0 ]; then
     echo "${green}All passed!${reset}"
   else
     printf "%s" "$red"
-    printf -- "=%.0s" $(seq "$(tput cols)")
+    printf -- "=%.0s" $(seq "${cols:-70}")
     printf "\n"
     printf "Test failed!\n"
     for i in "$@"; do
       printf "  * %s\n" "$i"
     done
-    printf -- "=%.0s" $(seq "$(tput cols)")
+    printf -- "=%.0s" $(seq "${cols:-70}")
     printf "%s\n" "$reset"
   fi
 }
