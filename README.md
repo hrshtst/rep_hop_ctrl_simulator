@@ -11,7 +11,7 @@ simulation and Python scripts that plot the results.
 
 - A C toolchain: `gcc` and GNU `make`
 - Linux (the code links `-lrt` and the test timer uses `CLOCK_MONOTONIC_RAW`)
-- For plotting: Python 3.10+ and [`uv`](https://docs.astral.sh/uv/)
+- For plotting: Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
 - Optional: `valgrind` for the memory-check test mode
 
 ## Building

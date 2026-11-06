@@ -3,7 +3,7 @@ name = "graph-plot"
 version = "0.1.0"
 description = "Graph plotter for example programs"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "pyplotutil",
 ]
@@ -46,8 +46,8 @@ exclude = [
 line-length = 120
 indent-width = 4
 
-# Assume Python 3.10
-target-version = "py310"
+# Assume Python 3.11
+target-version = "py311"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
